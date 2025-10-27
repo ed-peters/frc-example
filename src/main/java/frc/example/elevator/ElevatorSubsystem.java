@@ -1,7 +1,6 @@
 package frc.example.elevator;
 
 import edu.wpi.first.math.MathUtil;
-import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.math.trajectory.TrapezoidProfile.Constraints;
 import edu.wpi.first.math.trajectory.TrapezoidProfile.State;
@@ -10,6 +9,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.example.Motor;
+import frc.example.PDController;
 import frc.example.Util;
 
 import java.util.function.DoubleSupplier;
@@ -63,7 +63,7 @@ public class ElevatorSubsystem extends SubsystemBase {
     }
 
     final Motor motor;
-    final PIDController pid;
+    final PDController pid;
     TrapezoidProfile profile;
     String currentCommand;
     double goalHeight;
@@ -76,7 +76,7 @@ public class ElevatorSubsystem extends SubsystemBase {
     public ElevatorSubsystem(Motor motor) {
 
         this.motor = motor;
-        this.pid = new PIDController(p.getAsDouble(), 0.0, d.getAsDouble());
+        this.pid = new PDController(p, d, maxFeedback, tolerance);
         this.currentCommand = "";
         this.nextHeight = Double.NaN;
         this.nextVelocity = Double.NaN;
@@ -114,8 +114,7 @@ public class ElevatorSubsystem extends SubsystemBase {
      * "close enough" to its goal?
      */
     public boolean atGoal() {
-        return Double.isFinite(goalHeight)
-                && Math.abs(goalHeight - getHeight()) < tolerance.getAsDouble();
+        return Double.isFinite(goalHeight) && pid.at(getHeight(), goalHeight);
     }
 
     /** @return the height associated with the specified preset */
@@ -149,9 +148,7 @@ public class ElevatorSubsystem extends SubsystemBase {
      */
     private void resetPidAndProfile() {
 
-        pid.setP(p.getAsDouble());
-        pid.setD(d.getAsDouble());
-        pid.setTolerance(tolerance.getAsDouble());
+        // reset the PID
         pid.reset();
 
         // it's a little easier to think about acceleration as a multiple
@@ -174,12 +171,7 @@ public class ElevatorSubsystem extends SubsystemBase {
         nextHeight = MathUtil.clamp(height, minHeight.getAsDouble(), maxHeight.getAsDouble());
         nextVelocity = Util.applyClamp(velocity, maxVelocity);
         lastFeedforward = g.getAsDouble() + v.getAsDouble() * nextVelocity;
-
-        // note that we clamp maximum feedback - if the target position is
-        // too far away from the current position we could wind up with an
-        // awkward "mousetrap" effect if we don't do this
-        lastFeedback = Util.applyClamp(pid.calculate(getHeight(), nextVelocity), maxFeedback);
-
+        lastFeedback = pid.calculate(getHeight(), nextVelocity);
         lastVolts = Util.clampVolts(lastFeedforward + lastFeedback);
         motor.applyVolts(lastVolts);
     }

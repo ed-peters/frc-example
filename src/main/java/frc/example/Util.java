@@ -1,14 +1,19 @@
 package frc.example;
 
+import edu.wpi.first.apriltag.AprilTagFieldLayout;
+import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.math.trajectory.TrapezoidProfile.State;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Preferences;
 
+import java.util.Optional;
 import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 
@@ -38,6 +43,9 @@ public class Util {
 
     /** Pose with no values */
     public static final Pose2d NAN_POSE = new Pose2d(Double.NaN, Double.NaN, NAN_ROTATION);
+
+    /** State with all zeros */
+    public static final State ZERO_STATE = new State();
 
     /** Speed with all zeros */
     public static final ChassisSpeeds ZERO_SPEED = new ChassisSpeeds(0.0, 0.0, 0.0);
@@ -89,6 +97,21 @@ public class Util {
     /** @return true if the supplied speeds include a rotation */
     public static boolean isRotating(ChassisSpeeds speeds) {
         return Math.abs(speeds.omegaRadiansPerSecond) > 0.0;
+    }
+
+    // ===========================================================
+    // FIELD STUFF
+    // ===========================================================
+
+    static AprilTagFieldLayout layout = null;
+
+    /** @return information about the supplied AprilTag */
+    public static Pose2d getAprilTagPose(int id) {
+        if (layout == null) {
+            layout = AprilTagFieldLayout.loadField(AprilTagFields.kDefaultField);
+        }
+        Optional<Pose3d> pose = layout.getTagPose(id);
+        return pose.map(Pose3d::toPose2d).orElse(null);
     }
 
     /** @return true if the driver's station says we're blue alliance */

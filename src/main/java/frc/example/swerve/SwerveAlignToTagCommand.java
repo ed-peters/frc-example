@@ -1,12 +1,13 @@
 package frc.example.swerve;
 
-import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
+import frc.example.AprilTarget;
+import frc.example.PDController;
 import frc.example.Util;
 
-import java.util.function.DoubleSupplier;
+import java.util.function.Supplier;
 
 import static frc.example.swerve.SwerveAlignConfig.tagAreaD;
 import static frc.example.swerve.SwerveAlignConfig.tagAreaP;
@@ -34,95 +35,89 @@ import static frc.example.swerve.SwerveAlignConfig.tagOffsetTolerance;
 public class SwerveAlignToTagCommand extends Command {
 
     final SwerveDriveSubsystem drive;
-    final DoubleSupplier areaSupplier;
-    final DoubleSupplier offsetSupplier;
-    final PIDController pidArea;
-    final PIDController pidOffset;
-    double speedX;
-    double speedY;
+    final Supplier<AprilTarget> targetSupplier;
+    final PDController pidArea;
+    final PDController pidOffset;
+    double lastOffset;
+    double lastArea;
+    double lastSpeedX;
+    double lastSpeedY;
     boolean doneX;
     boolean doneY;
 
-    public SwerveAlignToTagCommand(
-            SwerveDriveSubsystem drive,
-            DoubleSupplier areaSupplier,
-            DoubleSupplier offsetSupplier) {
-
+    public SwerveAlignToTagCommand(SwerveDriveSubsystem drive,
+                                   Supplier<AprilTarget> targetSupplier) {
         this.drive = drive;
-        this.pidArea = new PIDController(tagAreaP.getAsDouble(), 0.0, tagAreaD.getAsDouble());
-        this.pidOffset = new PIDController(tagOffsetP.getAsDouble(), 0.0, tagOffsetD.getAsDouble());
-        this.areaSupplier = areaSupplier;
-        this.offsetSupplier = offsetSupplier;
-
+        this.targetSupplier = targetSupplier;
+        this.pidArea = new PDController(tagAreaP, tagAreaD, tagMaxFeedback, tagAreaTolerance);
+        this.pidOffset = new PDController(tagOffsetP, tagOffsetD, tagMaxFeedback, tagOffsetTolerance);
         addRequirements(drive);
+    }
 
-        SmartDashboard.putData("AlignToAprilTag", builder -> {
-            builder.addDoubleProperty("SpeedX", () -> speedX, null);
-            builder.addDoubleProperty("SpeedY", () -> speedY, null);
-            builder.addDoubleProperty("OffsetCurrent", offsetSupplier, null);
+    /**
+     * In normal operation, there are probably going to be a bunch of
+     * instances of this command, so we won't clutter the dashboard with
+     * them all; instead, this will let you register them under different
+     * names e.g. for testing
+     */
+    public void addToDash(String name) {
+        SmartDashboard.putData(name, builder -> {
+            builder.addDoubleProperty("SpeedX", () -> lastSpeedX, null);
+            builder.addDoubleProperty("SpeedY", () -> lastSpeedY, null);
+            builder.addDoubleProperty("OffsetCurrent", () -> lastOffset, null);
             builder.addDoubleProperty("OffsetError", pidOffset::getError, null);
-            builder.addDoubleProperty("AreaCurrent", areaSupplier, null);
+            builder.addDoubleProperty("AreaCurrent", () -> lastArea, null);
             builder.addDoubleProperty("AreaOffset", pidArea::getError, null);
-            builder.addBooleanProperty("AtX?", () -> doneX, null);
-            builder.addBooleanProperty("AtY?", () -> doneY, null);
+            builder.addBooleanProperty("AtX?", pidOffset::atSetpoint, null);
+            builder.addBooleanProperty("AtY?", pidArea::atSetpoint, null);
         });
     }
 
     @Override
     public void initialize() {
-
-        pidOffset.setP(tagOffsetP.getAsDouble());
-        pidOffset.setD(tagOffsetD.getAsDouble());
-        pidOffset.setTolerance(tagOffsetTolerance.getAsDouble());
         pidOffset.reset();
-
-        pidArea.setP(tagAreaP.getAsDouble());
-        pidArea.setD(tagAreaD.getAsDouble());
-        pidArea.setTolerance(tagAreaTolerance.getAsDouble());
         pidArea.reset();
-
         doneX = false;
         doneY = false;
-
-        Util.log("[swerve] aligning to tag");
+        Util.log("[align-tag] aligning to tag");
     }
 
     @Override
     public void execute() {
 
-        // until we the target offset, we need to juke left and right
-        // to align to the in-view tag
-        if (pidOffset.atSetpoint()) {
+        AprilTarget target = targetSupplier.get();
+
+        // if we lose sight of the tag, we can't really do anything
+        // and we have to quit
+        if (target == null || target.id() < 0) {
+            Util.log("[align-tag] MISSING TAG!!!");
             doneX = true;
-            speedX = 0.0;
-        } else {
-            doneX = false;
-
-            // TX gets is positive when the tag is offset to the left.
-            // To fix this, we want to move in the +X direction, which
-            // is also positive. So we will negate the offset for our
-            // feedback calculations
-            double offset = -offsetSupplier.getAsDouble();
-            speedX = Util.applyClamp(
-                    pidOffset.calculate(offset, tagOffsetTarget.getAsDouble()),
-                    tagMaxFeedback);
-        }
-
-        // until we the target area, we need to drive forward and back
-        // to align to the in-view tag
-        if (pidArea.atSetpoint()) {
             doneY = true;
-            speedY = 0.0;
-        } else {
-            doneY = false;
-            speedY = Util.applyClamp(
-                    pidArea.calculate(areaSupplier.getAsDouble(), tagAreaTarget.getAsDouble()),
-                    tagMaxFeedback);
+            return;
         }
 
-        drive.drive("align-to-tag", new ChassisSpeeds(
-                speedX,
-                speedY,
+        // TX is positive when the tag is offset to the left.
+        // To fix this, we want to move in the +X direction, which
+        // is also positive. So we will negate the offset for our
+        // feedback calculations
+        lastSpeedX = 0.0;
+        lastSpeedY = 0.0;
+        lastOffset = -target.offset();
+        lastArea = target.area();
+
+        if (!doneX) {
+            lastSpeedX = pidOffset.calculate(lastOffset, tagOffsetTarget.getAsDouble());
+            doneX = pidOffset.atSetpoint();
+        }
+
+        if (!doneY) {
+            lastSpeedY = pidArea.calculate(lastArea, tagAreaTarget.getAsDouble());
+            doneY = pidArea.atSetpoint();
+        }
+
+        drive.drive("align-tag", new ChassisSpeeds(
+                lastSpeedX,
+                lastSpeedY,
                 0.0));
     }
 
@@ -133,11 +128,30 @@ public class SwerveAlignToTagCommand extends Command {
 
     @Override
     public void end(boolean interrupted) {
-        if (!pidOffset.atSetpoint()) {
-            Util.log("[swerve] failed aligning to tag in X");
+
+        if (doneX && doneY) {
+            Util.log("[align-tag] succeeded aligning to tag");
         }
-        if (!pidArea.atSetpoint()) {
-            Util.log("[swerve] failed aligning to tag in Y");
+
+        // warn about this, in case this command had to be interrupted
+        // by a timeout because it never got to the target alignment or
+        // something like that; that's a sign that it's badly tuned or
+        // may need a larger tolerance
+        else {
+            String which = "";
+            if (doneX) {
+                which = "Y";
+            } else if (doneY) {
+                which = "X";
+            } else {
+                which = "X and Y";
+            }
+            Util.log("[align-tag] !!! FAILED aligning to tag in %s !!!", which);
         }
+
+        lastArea = Double.NaN;
+        lastOffset = Double.NaN;
+        lastSpeedX = Double.NaN;
+        lastSpeedY = Double.NaN;
     }
 }

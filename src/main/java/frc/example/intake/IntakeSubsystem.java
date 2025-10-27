@@ -6,6 +6,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.example.Motor;
+import frc.example.PDController;
 import frc.example.Util;
 
 import java.util.function.BooleanSupplier;
@@ -61,7 +62,7 @@ public class IntakeSubsystem extends SubsystemBase {
 
     final Motor motor;
     final BooleanSupplier sensor;
-    final PIDController pid;
+    final PDController pid;
 
     // displaying what a subsystem "thinks" it's doing on the dashboard
     // is really helpful when you're debugging the robot
@@ -76,7 +77,7 @@ public class IntakeSubsystem extends SubsystemBase {
 
         this.motor = motor;
         this.sensor = sensor;
-        this.pid = new PIDController(p.getAsDouble(), 0.0, d.getAsDouble());
+        this.pid = new PDController(p, d, null, tolerance);
         this.currentCommand = "";
         this.targetRps = Double.NaN;
 
@@ -168,9 +169,6 @@ public class IntakeSubsystem extends SubsystemBase {
                 // keep track of what the robot "thinks" it's doing for
                 // debugging
                 Util.log("[intake] running %s%n", command);
-                pid.setP(p.getAsDouble());
-                pid.setD(d.getAsDouble());
-                pid.setTolerance(tolerance.getAsDouble());
                 pid.reset();
             }
 

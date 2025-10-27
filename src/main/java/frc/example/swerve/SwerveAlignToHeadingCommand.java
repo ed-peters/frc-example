@@ -1,13 +1,11 @@
 package frc.example.swerve;
 
-import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
+import frc.example.PDController;
 import frc.example.Util;
-
-import java.util.function.Supplier;
 
 import static frc.example.swerve.SwerveAlignConfig.toHeadingMaxFeedback;
 import static frc.example.swerve.SwerveAlignConfig.toHeadingP;
@@ -17,25 +15,23 @@ import static frc.example.swerve.SwerveAlignConfig.toHeadingTolerance;
 /**
  * Implements automatically aligning the robot to a target heading.
  * Demonstrates using PID control to automatically position the robot.
- * There are likely to be multiple instances of this command, with
- * different targets; each will have its own name ("reef", "speaker",
- * etc.)
  */
 public class SwerveAlignToHeadingCommand extends Command {
 
     final SwerveDriveSubsystem drive;
-    final Supplier<Rotation2d> headingSupplier;
-    final PIDController pid;
-    double targetDegrees;
+    final PDController pid;
+    final double targetDegrees;
     double currentDegrees;
     double lastCorrection;
 
-    public SwerveAlignToHeadingCommand(String name, SwerveDriveSubsystem drive, Supplier<Rotation2d> headingSupplier) {
+    public SwerveAlignToHeadingCommand(SwerveDriveSubsystem drive, Rotation2d targetHeading) {
 
         this.drive = drive;
-        this.headingSupplier = headingSupplier;
-        this.pid = new PIDController(toHeadingP.getAsDouble(), 0.0, toHeadingD.getAsDouble());
-        this.targetDegrees = Double.NaN;
+        this.pid = new PDController(toHeadingP,
+                    toHeadingD,
+                    toHeadingMaxFeedback,
+                    toHeadingTolerance);
+        this.targetDegrees = targetHeading.getDegrees();
         this.currentDegrees = Double.NaN;
         this.lastCorrection = Double.NaN;
 
@@ -44,8 +40,16 @@ public class SwerveAlignToHeadingCommand extends Command {
         pid.enableContinuousInput(-180.0, 180.0);
 
         addRequirements(drive);
+    }
 
-        SmartDashboard.putData("SwerveAlignToHeading-"+name, builder -> {
+    /**
+     * In normal operation, there are probably going to be a bunch of
+     * instances of this command, so we won't clutter the dashboard with
+     * them all; instead, this will let you register them under different
+     * names e.g. for testing
+     */
+    public void addToDash(String name) {
+        SmartDashboard.putData(name, builder -> {
             builder.addDoubleProperty("LastError", pid::getError, null);
             builder.addDoubleProperty("LastCorrection", () -> lastCorrection, null);
             builder.addDoubleProperty("TargetHeading", () -> targetDegrees, null);
@@ -56,17 +60,7 @@ public class SwerveAlignToHeadingCommand extends Command {
 
     @Override
     public void initialize() {
-
-        // figure out where we're going this time
-        targetDegrees = headingSupplier.get().getDegrees();
-
-        // reset the PID controller to get the latest configuration
-        pid.setP(toHeadingP.getAsDouble());
-        pid.setD(toHeadingD.getAsDouble());
-        pid.setTolerance(toHeadingTolerance.getAsDouble());
         pid.reset();
-
-        Util.log("[swerve] aligning to %.2f", targetDegrees);
     }
 
     @Override
@@ -91,10 +85,15 @@ public class SwerveAlignToHeadingCommand extends Command {
 
     @Override
     public void end(boolean interrupted) {
+
+        // warn about this, in case this command had to be interrupted
+        // by a timeout because it never got to the target heading or
+        // something like that; that's a sign that it's badly tuned or
+        // may need a larger tolerance
         if (!pid.atSetpoint()) {
-            Util.log("[swerve] !!! MISSED alignment to %.2f !!!", targetDegrees);
+            Util.log("[align-heading] !!! MISSED alignment to %.2f !!!", targetDegrees);
         }
-        targetDegrees = Double.NaN;
+
         currentDegrees = Double.NaN;
         lastCorrection = Double.NaN;
     }

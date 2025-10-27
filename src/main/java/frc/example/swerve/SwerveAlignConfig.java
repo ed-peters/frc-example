@@ -1,10 +1,5 @@
 package frc.example.swerve;
 
-import edu.wpi.first.math.geometry.Translation2d;
-import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
-import edu.wpi.first.math.util.Units;
-
-import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 
 import static frc.example.Util.pref;
@@ -52,13 +47,31 @@ public class SwerveAlignConfig {
     public static DoubleSupplier tagMaxFeedback = pref("AlignToTag/MaxFeedback", 10.0);
 
     // ==================================================================
-    // FOLLOW TRAJECTORY
+    // TRAJECTORY
     // ==================================================================
 
-    public static DoubleSupplier trajectoryMinDistance = pref("swerve_trajectory_min_distance", 10.0);
+    /** Properties for driving a trajectory (translation) */
+    public static DoubleSupplier trajectoryTranslateP = pref("AlignTrajectory/TranslateP", 10.0);
+    public static DoubleSupplier trajectoryTranslateD = pref("AlignTrajectory/TranslateD", 10.0);
+    public static DoubleSupplier trajectoryMaxTranslate = pref("AlignTrajectory/MaxTranslate", 10.0);
 
-    public static DoubleSupplier trajectoryMaxVelocity = pref("swerve_trajectory_max_velocity", 10.0);
+    /** Properties for driving a trajectory (rotation) */
+    public static DoubleSupplier trajectoryRotateP = pref("AlignTrajectory/RotateP", 10.0);
+    public static DoubleSupplier trajectoryRotateD = pref("AlignTrajectory/RotateD", 10.0);
+    public static DoubleSupplier trajectoryMaxRotate = pref("AlignTrajectory/MaxRotate", 10.0);
 
-    public static DoubleSupplier trajectoryAccelerationFactor = pref("swerve_trajectory_acceleration", 10.0);
+    /** Properties for driving a trajectory (all directions) */
+    public static DoubleSupplier trajectoryAcceleration = pref("AlignTrajectory/Acceleration", 10.0);
+    
+    // ==================================================================
+    // PID
+    // ==================================================================
+
+    /** Properties for driving via PID */
+    public static DoubleSupplier pidP = pref("AlignTrajectory/P", 10.0);
+    public static DoubleSupplier pidD = pref("AlignPID/D", 10.0);
+    public static DoubleSupplier pidMaxVelocity = pref("AlignPID/MaxVelocity", 10.0);
+    public static DoubleSupplier pidTolerance = pref("AlignPID/Tolerance", 10.0);
+    public static DoubleSupplier pidAcceleration = pref("AlignPID/Acceleration", 10.0);
 
 }
