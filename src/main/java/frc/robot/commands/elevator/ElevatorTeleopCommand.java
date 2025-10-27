@@ -6,7 +6,7 @@ import frc.robot.subsystems.elevator.ElevatorSubsystem;
 
 import java.util.function.DoubleSupplier;
 
-import static frc.robot.subsystems.elevator.ElevatorConfig.*;
+import static frc.robot.util.Util.MAX_VOLTS;
 
 /**
  * Operates the elevator in teleop mode, holding still when there
@@ -37,7 +37,7 @@ public class ElevatorTeleopCommand extends Command {
     @Override
     public void execute() {
 
-        double volts = MathUtil.clamp(input.getAsDouble() * maxVolts, -maxVolts, maxVolts);
+        double volts = MathUtil.clamp(input.getAsDouble() * MAX_VOLTS, -MAX_VOLTS, MAX_VOLTS);
 
         // if we're applying volts, we clear the hold position
         if (volts != 0.0) {
