@@ -42,7 +42,6 @@ public class ElevatorSimRobot extends TimedRobot {
         controller.b().onTrue(elevator.presetCommand(Preset.L3));        
         controller.x().whileTrue(elevator.releaseCommand());
         controller.y().onTrue(elevator.runOnce(() -> {
-            System.out.println("setting sim height");
             sim.setHeight(70.0);
         }));
     }

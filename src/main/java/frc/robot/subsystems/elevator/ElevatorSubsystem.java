@@ -29,7 +29,6 @@ import static frc.robot.subsystems.elevator.ElevatorConfig.presetL2;
 import static frc.robot.subsystems.elevator.ElevatorConfig.presetL3;
 import static frc.robot.subsystems.elevator.ElevatorConfig.tolerance;
 import static frc.robot.subsystems.elevator.ElevatorConfig.v;
-import static frc.robot.util.Util.DT;
 
 /**
  * Example of an elevator subsystem based on the 2025 Reefscape robot.
@@ -71,8 +70,6 @@ public class ElevatorSubsystem extends SubsystemBase {
     String currentCommand;
     double goalHeight;
     double targetHeight;
-    double lastHeight;
-    double currentVelocity;
     double targetVelocity;
     double timeToGoal;
     double lastFeedforward;
@@ -86,8 +83,6 @@ public class ElevatorSubsystem extends SubsystemBase {
         this.currentCommand = "";
         this.goalHeight = Double.NaN;
         this.timeToGoal = Double.NaN;
-        this.lastHeight = Double.NaN;
-        this.currentVelocity = Double.NaN;
         this.targetHeight = Double.NaN;
         this.targetVelocity = Double.NaN;
         this.lastFeedforward = Double.NaN;
@@ -121,7 +116,7 @@ public class ElevatorSubsystem extends SubsystemBase {
 
     /** @return the elevator's current velocity in inches per second */
     public double getVelocity() {
-        return currentVelocity; // motor.getVelocity() * inchesPerRotation;
+        return motor.getVelocity() * inchesPerRotation;
     }
 
     /**
@@ -189,15 +184,6 @@ public class ElevatorSubsystem extends SubsystemBase {
         lastFeedback = pid.calculate(getHeight(), targetHeight);
         lastVolts = Util.clampVolts(lastFeedforward + lastFeedback);
         motor.applyVolts(lastVolts);
-    }
-
-    @Override
-    public void periodic() {
-        double currentHeight = getHeight();
-        if (Double.isFinite(lastHeight)) {
-            currentVelocity = (currentHeight - lastHeight) / DT;
-        }
-        lastHeight = currentHeight;
     }
 
     /**
@@ -300,9 +286,7 @@ public class ElevatorSubsystem extends SubsystemBase {
                 startState = new State(getHeight(), getVelocity());
                 finalState = new State(heightSupplier.getAsDouble(), 0.0);
 
-                Util.log("[elevator] moving to %s @ %.2f",
-                        name,
-                        finalState.position);
+                Util.log("[elevator] moving to %s @ %.2f", name, finalState.position);
 
                 timeToGoal = profile.totalTime();
 
