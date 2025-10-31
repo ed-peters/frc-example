@@ -9,13 +9,26 @@ import java.util.function.DoubleSupplier;
 
 import static frc.robot.util.Util.pref;
 
+/**
+ * Configuration properties for the sample swerve subsystem. Stuff that
+ * will (probably) never change can simply be Java constants, but stuff
+ * that we might tweak/tune should be in {@link edu.wpi.first.wpilibj.Preferences}
+ */
 public class SwerveConfig {
 
+    /** Distance from center of front wheel to center of back wheel */
     public static final double WHEEL_BASE_M = Units.inchesToMeters(26.25);
+
+    /** Distance from center line of left wheel to center line of right wheel */
     public static final double TRACK_WIDTH_M = Units.inchesToMeters(26.5);
+
+    /** Wheel diameter */
     public static final double WHEEL_DIAM_M = Units.inchesToMeters(3.0);
+
+    /** Wheel circumference */
     public static final double WHEEL_CIRC_M = WHEEL_DIAM_M * Math.PI;
 
+    /** Kinematics for a rectangular robot based on the dimensions above */
     public static final SwerveDriveKinematics kinematics = new SwerveDriveKinematics(
             new Translation2d(WHEEL_BASE_M / 2, TRACK_WIDTH_M / 2),
             new Translation2d(WHEEL_BASE_M / 2, -TRACK_WIDTH_M / 2),
@@ -27,49 +40,6 @@ public class SwerveConfig {
 
     /** Enable/disable cosine compensation */
     public static BooleanSupplier cosineCompensation = pref("swerve_cosine", false);
-
-    // ==================================================================
-    // TELEOP CONFIG
-    // ==================================================================
-
-    /** Deadband applied to joystick input in teleop */
-    public static final DoubleSupplier deadband = pref("swerve_teleop_deadband", 0.1);
-
-    /** Exponent applied to joystick input in teleop */
-    public static final DoubleSupplier exponent = pref("swerve_teleop_exponent", 2.0);
-
-    /** Top translate (X/Y) speed in teleop */
-    public static final DoubleSupplier maxTeleopTranslate = pref("swerve_teleop_max_translate", 10.0);
-
-    /** Top rotation speed in teleop */
-    public static final DoubleSupplier maxTeleopRotate = pref("swerve_teleop_max_rotate", 180.0);
-
-    /** Multiplied by top speed in turbo mode */
-    public static final DoubleSupplier turboFactor = pref("swerve_teleop_turbo_factor", 2.0);
-
-    /** Multiplied by top speed in sniper mode */
-    public static final DoubleSupplier sniperFactor = pref("swerve_teleop_sniper_factor", 0.5);
-
-    /** Does the sniper multiple apply to rotation too? */
-    public static final BooleanSupplier applySniperToRotate = pref("swerve_teleop_apply_sniper_to_rotate", true);
-
-    /** Should we apply slew rate limiting in teleop? */
-    public static final BooleanSupplier applySlew = pref("swerve_teleop_apply_slew", false);
-
-    /** Slew rate limit () */
-    public static final DoubleSupplier slewRate = pref("swerve_teleop_slew_rate", 4.0);
-
-    /** Driver relative mode */
-    public static final BooleanSupplier fieldRelative = pref("swerve_field_relative", true);
-
-    /** Turn drift correction on/off */
-    public static BooleanSupplier teleopDriftCorrection = pref("swerve_drift_correction", true);
-
-    /** Feedback constant for drift correction: P */
-    public static DoubleSupplier teleopDriftP = pref("swerve_drift_p", 2.0);
-
-    /** Maximum feedback for drift correction, in degrees per second */
-    public static DoubleSupplier teleopDriftMaxFeedback = pref("swerve_drift_max_feedback", 10.0);
 
     // ==================================================================
     // ALIGN TO HEADING

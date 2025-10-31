@@ -1,7 +1,6 @@
 package frc.robot.subsystems.swerve;
 
 import edu.wpi.first.math.Matrix;
-import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -15,25 +14,36 @@ import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.robot.commands.swerve.DriveToHeadingCommand;
-import frc.robot.commands.swerve.DriveTeleopCommand;
+import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.util.Dash;
 import frc.robot.util.Util;
+import frc.robot.commands.swerve.SwerveAlignToHeadingCommand;
+import frc.robot.commands.swerve.SwerveTeleopCommand;
+import frc.robot.commands.swerve.SwerveTeleopSpeedSupplier;
 
-import java.util.function.Supplier;
+import java.util.function.BooleanSupplier;
+import java.util.function.DoubleSupplier;
 
-import static frc.robot.subsystems.swerve.SwerveConfig.*;
+import static frc.robot.subsystems.swerve.SwerveConfig.kinematics;
+import static frc.robot.subsystems.swerve.SwerveConfig.maximumWheelSpeed;
 
 /**
  * Interface for a swerve drive
  */
 public class SwerveDriveSubsystem extends SubsystemBase {
 
+    public enum Direction {
+        NORTH,
+        SOUTH,
+        EAST,
+        WEST
+    }
+
     final SwerveChassis chassis;
     final SwerveDriveOdometry odometry;
     final SwerveDrivePoseEstimator estimator;
-    final Matrix<N3,N1> visionStdDevs;
     Pose2d lastVisionPose;
     ChassisSpeeds lastSpeeds;
     String currentCommand;
@@ -50,10 +60,14 @@ public class SwerveDriveSubsystem extends SubsystemBase {
                 chassis.getHeading(),
                 chassis.getModulePositions(),
                 Util.ZERO_POSE);
-        this.visionStdDevs = VecBuilder.fill(0.7, 0.7, 9999999);
         this.lastVisionPose = Util.ZERO_POSE;
         this.lastSpeeds = Util.ZERO_SPEED;
         this.currentCommand = "";
+    }
+
+    /** @return kinematics for the drive */
+    public SwerveDriveKinematics getKinematics() {
+        return kinematics;
     }
 
     /**
@@ -94,7 +108,7 @@ public class SwerveDriveSubsystem extends SubsystemBase {
      * Reset the pose of the robot to the specified value
      */
     public void resetPose(Pose2d pose) {
-        Dash.log("[swerve] resetting pose to %s", pose);
+        Util.log("[swerve] resetting pose to %s", pose);
         odometry.resetPose(pose);
         estimator.resetPose(pose);
         chassis.resetHeading(pose.getRotation());
@@ -133,13 +147,6 @@ public class SwerveDriveSubsystem extends SubsystemBase {
         } else {
             resetPose(getVisionPose());
         }
-    }
-
-    /**
-     * Tells the robot to stop
-     */
-    public void stop() {
-        drive("stop", Util.ZERO_SPEED);
     }
 
     /**
@@ -197,65 +204,74 @@ public class SwerveDriveSubsystem extends SubsystemBase {
         odometry.update(heading, positions);
         estimator.update(heading, positions);
 
-        // published to smart dashboard for humans to read
-        Dash.publish("SwerveDrive/CurrentCommand", currentCommand);
-        Dash.publishFeet("SwerveDrive/SpeedX", lastSpeeds.vxMetersPerSecond);
-        Dash.publishFeet("SwerveDrive/SpeedY", lastSpeeds.vxMetersPerSecond);
-        Dash.publishDegrees("SwerveDrive/SpeedOmega", lastSpeeds.vxMetersPerSecond);
-
         // published as structs to view in AdvantageScope
         Dash.publish("SwerveDrive/Structs/PoseFused", getFusedPose());
         Dash.publish("SwerveDrive/Structs/PoseOdometry", getOdometryPose());
         Dash.publish("SwerveDrive/Structs/PoseVision", getVisionPose());
     }
 
-    /**
-     * @return a teleop command for this drive using the {@link TurboSniperSpeedSupplier}
-     */
-    public Command teleopCommand(TurboSniperSpeedSupplier supplier) {
-        return new DriveTeleopCommand(this, supplier);
-    }
+    // ========================================================
+    // DRIVING COMMANDS
+    // ========================================================
 
     /**
-     * @return a command to drive to a fixed heading
+     * @return a teleop command for this drive using the "standard"
+     * controls (left stick controls strafing, right stick controls
+     * turning, left trigger is sniper, right trigger is turbo)
      */
-    public Command alignToHeadingCommand(String name, Supplier<Rotation2d> headingSupplier) {
-        return new DriveToHeadingCommand(name, this, headingSupplier);
+    public Command teleopCommand(CommandXboxController controller) {
+
+        // pushing right or forward on the joystick results in negative values, so
+        // we invert them before using them
+        DoubleSupplier leftX = () -> -controller.getLeftX();
+        DoubleSupplier leftY = () -> -controller.getLeftY();
+        DoubleSupplier rightX = () -> -controller.getRightX();
+
+        // triggers controller sniper/turbo behavior
+        BooleanSupplier sniperTrigger = () -> controller.getLeftTriggerAxis() > 0.5;
+        BooleanSupplier turboTrigger = () -> controller.getRightTriggerAxis() > 0.5;
+
+        return new SwerveTeleopCommand(this, new SwerveTeleopSpeedSupplier(
+                leftX,
+                leftY,
+                rightX,
+                turboTrigger,
+                sniperTrigger));
     }
 
-    /**
-     * @return a command to drive to a new pose
-    public Command driveToPoseCommand(Function<Pose2d,Pose2d> poseFunction) {
-        return new DriveToPoseCommand(this, poseFunction);
-    }
-     */
+    /** @return a command to align the robot to an arena wall */
+    public Command alignToWallCommand(Direction direction) {
 
-    /**
-     * @return a command to drive to a new pose
-    public Command driveAroundObstacleCommand(Function<Pose2d,Translation2d> centerFunction, DoubleSupplier maxSpeed, DoubleSupplier input) {
-        return new DriveAroundObstacleCommand(this, centerFunction, maxSpeed, input);
-    }
-     */
+        // we can determine the angle from the direction once here
+        Rotation2d angle = switch (direction) {
+            case NORTH -> Rotation2d.fromDegrees(90.0);
+            case SOUTH -> Rotation2d.fromDegrees(-90.0);
+            case EAST -> Rotation2d.fromDegrees(0.0);
+            case WEST -> Rotation2d.fromDegrees(180.0);
+        };
 
-    /**
-     * @return a command to zero the heading of the robot
-     */
-    public Command zeroHeadingCommand() {
-        return runOnce(this::resetToZeroHeading);
+        // we'll use a proxy command so it picks up the latest tuning
+        // properties every time it runs
+        return Commands.deferredProxy(() -> new SwerveAlignToHeadingCommand(this, angle));
     }
 
-    /**
-     * @return a command to zero the pose of the robot
-     */
+    // ========================================================
+    // POSE COMMANDS
+    // ========================================================
+
+    /** @return a command to set the pose to 0 */
     public Command zeroPoseCommand() {
-        return runOnce(this::resetToZeroPose);
+        return runOnce(() -> resetPose(Util.ZERO_POSE));
     }
 
-    /**
-     * @return a command to accept the most recent vision pose as the
-     * current pose of the robot
-     */
-    public Command resetWithVisionPoseCommand() {
-        return runOnce(this::resetWithVisionPose);
+    /** @return a command to set the pose to the most recent vision pose */
+    public Command visionPoseCommand() {
+        return runOnce(() -> {
+            if (lastVisionPose == null) {
+                Util.log("[swerve] can't reset pose (no vision pose available)");
+            } else {
+                resetPose(lastVisionPose);
+            }
+        });
     }
 }

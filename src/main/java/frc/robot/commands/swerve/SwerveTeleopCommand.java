@@ -1,16 +1,17 @@
-package frc.example.swerve;
+package frc.robot.commands.swerve;
 
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
-import frc.example.Util;
+import frc.robot.util.Util;
+import frc.robot.subsystems.swerve.SwerveDriveSubsystem;
 
 import java.util.function.Supplier;
 
-import static frc.example.swerve.SwerveTeleopConfig.fieldRelative;
-import static frc.example.swerve.SwerveTeleopConfig.driftCorrection;
-import static frc.example.swerve.SwerveTeleopConfig.driftMaxFeedback;
-import static frc.example.swerve.SwerveTeleopConfig.driftP;
+import static frc.robot.commands.swerve.SwerveTeleopConfig.fieldRelative;
+import static frc.robot.commands.swerve.SwerveTeleopConfig.driftCorrection;
+import static frc.robot.commands.swerve.SwerveTeleopConfig.driftMaxFeedback;
+import static frc.robot.commands.swerve.SwerveTeleopConfig.driftP;
 
 /**
  * Implements teleop driving using the {@link SwerveTeleopSpeedSupplier}.

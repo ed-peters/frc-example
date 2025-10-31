@@ -1,46 +1,30 @@
 [
   {
-    "name": "/Preferences/elev_g",
+    "name": "/Preferences/ElevatorSubsystem/MinHeight",
     "type": "double",
-    "value": 1.3028,
+    "value": 1.0,
     "properties": {
       "persistent": true
     }
   },
   {
-    "name": "/Preferences/elev_v",
+    "name": "/Preferences/ElevatorSubsystem/MaxHeight",
     "type": "double",
-    "value": 0.0991,
+    "value": 90.0,
     "properties": {
       "persistent": true
     }
   },
   {
-    "name": "/Preferences/elev_p",
+    "name": "/Preferences/ElevatorSubsystem/MaxVelocity",
     "type": "double",
-    "value": 0.4,
+    "value": 30.0,
     "properties": {
       "persistent": true
     }
   },
   {
-    "name": "/Preferences/elev_d",
-    "type": "double",
-    "value": 0.3,
-    "properties": {
-      "persistent": true
-    }
-  },
-  {
-    "name": "/Preferences/elev_max_velocity",
-    "type": "double",
-    "value": 120.0,
-    "properties": {
-      "persistent": true
-    }
-  },
-  {
-    "name": "/Preferences/elev_acceleration",
+    "name": "/Preferences/ElevatorSubsystem/Acceleration",
     "type": "double",
     "value": 2.0,
     "properties": {
@@ -48,7 +32,7 @@
     }
   },
   {
-    "name": "/Preferences/elev_max_volts_up",
+    "name": "/Preferences/ElevatorSubsystem/TeleopVolts",
     "type": "double",
     "value": 6.0,
     "properties": {
@@ -56,7 +40,23 @@
     }
   },
   {
-    "name": "/Preferences/elev_max_volts_down",
+    "name": "/Preferences/ElevatorSubsystem/P",
+    "type": "double",
+    "value": 0.0,
+    "properties": {
+      "persistent": true
+    }
+  },
+  {
+    "name": "/Preferences/ElevatorSubsystem/D",
+    "type": "double",
+    "value": 0.0,
+    "properties": {
+      "persistent": true
+    }
+  },
+  {
+    "name": "/Preferences/ElevatorSubsystem/MaxFeedback",
     "type": "double",
     "value": 2.0,
     "properties": {
@@ -64,15 +64,23 @@
     }
   },
   {
-    "name": "/Preferences/elev_max_feedback",
+    "name": "/Preferences/ElevatorSubsystem/G",
     "type": "double",
-    "value": 2.0,
+    "value": 2.5396,
     "properties": {
       "persistent": true
     }
   },
   {
-    "name": "/Preferences/elev_pos_tolerance",
+    "name": "/Preferences/ElevatorSubsystem/V",
+    "type": "double",
+    "value": 0.1,
+    "properties": {
+      "persistent": true
+    }
+  },
+  {
+    "name": "/Preferences/ElevatorSubsystem/Tolerance",
     "type": "double",
     "value": 0.25,
     "properties": {
@@ -80,7 +88,7 @@
     }
   },
   {
-    "name": "/Preferences/elev_level1",
+    "name": "/Preferences/ElevatorSubsystem/L1",
     "type": "double",
     "value": 10.0,
     "properties": {
@@ -88,7 +96,7 @@
     }
   },
   {
-    "name": "/Preferences/elev_level2",
+    "name": "/Preferences/ElevatorSubsystem/L2",
     "type": "double",
     "value": 40.0,
     "properties": {
@@ -96,9 +104,17 @@
     }
   },
   {
-    "name": "/Preferences/elev_level3",
+    "name": "/Preferences/ElevatorSubsystem/L3",
     "type": "double",
     "value": 80.0,
+    "properties": {
+      "persistent": true
+    }
+  },
+  {
+    "name": "/Preferences/ElevatorSubsystem/TuningVelocity",
+    "type": "double",
+    "value": 0.0,
     "properties": {
       "persistent": true
     }

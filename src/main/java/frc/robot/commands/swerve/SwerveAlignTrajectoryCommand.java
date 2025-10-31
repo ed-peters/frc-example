@@ -1,4 +1,4 @@
-package frc.example.swerve;
+package frc.robot.commands.swerve;
 
 import edu.wpi.first.math.controller.HolonomicDriveController;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -11,27 +11,30 @@ import edu.wpi.first.math.trajectory.TrajectoryGenerator;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
-import frc.example.Dash;
-import frc.example.PDController;
-import frc.example.ProfiledPDController;
-import frc.example.Util;
+import frc.robot.util.Dash;
+import frc.robot.util.PDController;
+import frc.robot.util.ProfiledPDController;
+import frc.robot.util.Util;
+import frc.robot.subsystems.swerve.SwerveDriveSubsystem;
 
 import java.util.List;
 
-import static frc.example.swerve.SwerveConfig.kinematics;
-import static frc.example.swerve.SwerveAlignConfig.trajectoryAcceleration;
-import static frc.example.swerve.SwerveAlignConfig.trajectoryMaxRotate;
-import static frc.example.swerve.SwerveAlignConfig.trajectoryMaxTranslate;
-import static frc.example.swerve.SwerveAlignConfig.trajectoryRotateD;
-import static frc.example.swerve.SwerveAlignConfig.trajectoryRotateP;
-import static frc.example.swerve.SwerveAlignConfig.trajectoryTranslateD;
-import static frc.example.swerve.SwerveAlignConfig.trajectoryTranslateP;
+import static frc.robot.commands.swerve.SwerveAlignConfig.trajectoryAcceleration;
+import static frc.robot.commands.swerve.SwerveAlignConfig.trajectoryMaxRotate;
+import static frc.robot.commands.swerve.SwerveAlignConfig.trajectoryMaxTranslate;
+import static frc.robot.commands.swerve.SwerveAlignConfig.trajectoryRotateD;
+import static frc.robot.commands.swerve.SwerveAlignConfig.trajectoryRotateP;
+import static frc.robot.commands.swerve.SwerveAlignConfig.trajectoryTranslateD;
+import static frc.robot.commands.swerve.SwerveAlignConfig.trajectoryTranslateP;
 
 /**
  * Moves the robot a fixed distance from its starting pose based
  * on the WPILib {@link Trajectory} capability.
  */
 public class SwerveAlignTrajectoryCommand extends Command {
+
+    public static final String KEY_POSE_NEXT = "SwerveDrive/Structs/PoseTrajectoryNext";
+    public static final String KEY_POSE_FINAL = "SwerveDrive/Structs/PoseTrajectoryFinal";
 
     final SwerveDriveSubsystem drive;
     final Translation2d offset;
@@ -83,7 +86,7 @@ public class SwerveAlignTrajectoryCommand extends Command {
         finalPose = new Pose2d(
                 startPose.getTranslation().plus(offset),
                 startPose.getRotation());
-        Dash.publish("AlignTrajectoryTarget", finalPose);
+        Dash.publish(KEY_POSE_FINAL, finalPose);
 
         Util.log("[align-trajectory] calculating trajectory to %s", finalPose);
 
@@ -91,7 +94,7 @@ public class SwerveAlignTrajectoryCommand extends Command {
         double maxV = trajectoryMaxTranslate.getAsDouble();
         double maxA = maxV * trajectoryAcceleration.getAsDouble();
         TrajectoryConfig config = new TrajectoryConfig(maxA, maxV);
-        config.setKinematics(kinematics);
+        config.setKinematics(drive.getKinematics());
 
         // calculate a midpoint for the trajectory
         Translation2d midpoint = new Translation2d(
@@ -119,7 +122,7 @@ public class SwerveAlignTrajectoryCommand extends Command {
 
         // use the trajectory to calculate the next desired pose
         State nextState = trajectory.sample(timer.get());
-        Dash.publish("AlignTrajectoryNext", nextState.poseMeters);
+        Dash.publish(KEY_POSE_NEXT, nextState.poseMeters);
 
         // use the controller to calculate the speeds required to
         // get us there
@@ -149,8 +152,5 @@ public class SwerveAlignTrajectoryCommand extends Command {
         }
 
         timer.stop();
-
-        Dash.publish("AlignTrajectoryTarget", Util.NAN_POSE);
-        Dash.publish("AlignTrajectoryNext", Util.NAN_POSE);
     }
 }

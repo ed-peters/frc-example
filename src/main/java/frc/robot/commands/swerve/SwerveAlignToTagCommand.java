@@ -1,23 +1,24 @@
-package frc.example.swerve;
+package frc.robot.commands.swerve;
 
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
-import frc.example.AprilTarget;
-import frc.example.PDController;
-import frc.example.Util;
+import frc.robot.util.AprilTarget;
+import frc.robot.util.PDController;
+import frc.robot.util.Util;
+import frc.robot.subsystems.swerve.SwerveDriveSubsystem;
 
 import java.util.function.Supplier;
 
-import static frc.example.swerve.SwerveAlignConfig.tagAreaD;
-import static frc.example.swerve.SwerveAlignConfig.tagAreaP;
-import static frc.example.swerve.SwerveAlignConfig.tagAreaTarget;
-import static frc.example.swerve.SwerveAlignConfig.tagAreaTolerance;
-import static frc.example.swerve.SwerveAlignConfig.tagMaxFeedback;
-import static frc.example.swerve.SwerveAlignConfig.tagOffsetD;
-import static frc.example.swerve.SwerveAlignConfig.tagOffsetP;
-import static frc.example.swerve.SwerveAlignConfig.tagOffsetTarget;
-import static frc.example.swerve.SwerveAlignConfig.tagOffsetTolerance;
+import static frc.robot.commands.swerve.SwerveAlignConfig.tagAreaD;
+import static frc.robot.commands.swerve.SwerveAlignConfig.tagAreaP;
+import static frc.robot.commands.swerve.SwerveAlignConfig.tagAreaTarget;
+import static frc.robot.commands.swerve.SwerveAlignConfig.tagAreaTolerance;
+import static frc.robot.commands.swerve.SwerveAlignConfig.tagMaxFeedback;
+import static frc.robot.commands.swerve.SwerveAlignConfig.tagOffsetD;
+import static frc.robot.commands.swerve.SwerveAlignConfig.tagOffsetP;
+import static frc.robot.commands.swerve.SwerveAlignConfig.tagOffsetTarget;
+import static frc.robot.commands.swerve.SwerveAlignConfig.tagOffsetTolerance;
 
 /**
  * Aligns the robot to an AprilTag based on:

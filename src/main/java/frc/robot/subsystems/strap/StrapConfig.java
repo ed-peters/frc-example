@@ -1,6 +1,6 @@
-package frc.example.rail;
+package frc.robot.subsystems.strap;
 
-import frc.example.Util;
+import frc.robot.util.Util;
 
 import java.util.function.DoubleSupplier;
 

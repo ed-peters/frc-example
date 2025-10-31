@@ -1,9 +1,9 @@
-package frc.example.swerve;
+package frc.robot.commands.swerve;
 
 import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 
-import static frc.example.Util.pref;
+import static frc.robot.util.Util.pref;
 
 /**
  * Configuration properties for the sample swerve subsystem. Stuff that

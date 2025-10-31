@@ -1,23 +1,26 @@
 package frc.robot.util;
 
 /**
- * Generic interface for a motor so we can write and test subsystems without depending
- * on specific vendor libraries
+ * This interface lets us write subsystems and commands without depending
+ * on a specific vendor hardware library
  */
 public interface Motor {
-    
-    /** @return position of the motor in rotations */
+
+    /** @return is the motor brake enabled? */
+    boolean isBrakeEnabled();
+
+    /** @return motor position in rotations */
     double getPosition();
 
-    /** @return velocity of the motor in rotations per second */
+    /** @return motor velocity in rotations per second */
     double getVelocity();
 
-    /** @return output current of the motor in amps */
-    double getAmps();
+    /** @return motor output current in amps */
+    double getCurrent();
 
     /** Applies voltage to the motor */
     void applyVolts(double volts);
 
-    /** Sets the "brake mode" of the motor */
-    void applyBrakes(boolean brake);
+    /** Enables/disables the motor brake */
+    void applyBrake(boolean brake);
 }

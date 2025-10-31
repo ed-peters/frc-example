@@ -1,25 +1,25 @@
-package frc.example.swerve;
+package frc.robot.commands.swerve;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import frc.example.Util;
+import frc.robot.util.Util;
 
 import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
-import static frc.example.swerve.SwerveTeleopConfig.applySlew;
-import static frc.example.swerve.SwerveTeleopConfig.applySniperToRotate;
-import static frc.example.swerve.SwerveTeleopConfig.deadband;
-import static frc.example.swerve.SwerveTeleopConfig.exponent;
-import static frc.example.swerve.SwerveTeleopConfig.maxRotate;
-import static frc.example.swerve.SwerveTeleopConfig.maxTranslate;
-import static frc.example.swerve.SwerveTeleopConfig.slewRate;
-import static frc.example.swerve.SwerveTeleopConfig.sniperFactor;
-import static frc.example.swerve.SwerveTeleopConfig.turboFactor;
+import static frc.robot.commands.swerve.SwerveTeleopConfig.applySlew;
+import static frc.robot.commands.swerve.SwerveTeleopConfig.applySniperToRotate;
+import static frc.robot.commands.swerve.SwerveTeleopConfig.deadband;
+import static frc.robot.commands.swerve.SwerveTeleopConfig.exponent;
+import static frc.robot.commands.swerve.SwerveTeleopConfig.maxRotate;
+import static frc.robot.commands.swerve.SwerveTeleopConfig.maxTranslate;
+import static frc.robot.commands.swerve.SwerveTeleopConfig.slewRate;
+import static frc.robot.commands.swerve.SwerveTeleopConfig.sniperFactor;
+import static frc.robot.commands.swerve.SwerveTeleopConfig.turboFactor;
 
 /**
  * Supplier for ChassisSpeeds that processes stick input and provides

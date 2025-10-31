@@ -6,7 +6,7 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 
-import static frc.robot.subsystems.swerve.SwerveConfig.*;
+import static frc.robot.subsystems.swerve.SwerveConfig.kinematics;
 
 public class SimSwerveDrive implements SwerveChassis {
 
@@ -38,15 +38,6 @@ public class SimSwerveDrive implements SwerveChassis {
             positions[i] = new SwerveModulePosition(distance[i], Rotation2d.fromRadians(angle[i]));
         }
         return positions;
-    }
-
-    @Override
-    public SwerveModuleState [] getModuleStates() {
-        SwerveModuleState [] states = new SwerveModuleState[4];
-        for (int i=0; i<4; i++) {
-            states[i] = new SwerveModuleState(velocity[i], Rotation2d.fromRadians(angle[i]));
-        }
-        return states;
     }
 
     @Override

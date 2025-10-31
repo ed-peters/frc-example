@@ -1,4 +1,4 @@
-package frc.example.elevator;
+package frc.robot.subsystems.elevator;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.system.plant.DCMotor;
@@ -10,20 +10,22 @@ import edu.wpi.first.wpilibj.smartdashboard.MechanismRoot2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.util.Color;
 import edu.wpi.first.wpilibj.util.Color8Bit;
-import frc.example.Motor;
+import frc.robot.util.Motor;
 
 import java.util.function.DoubleConsumer;
 
 import static frc.robot.subsystems.elevator.ElevatorConfig.inchesPerRotation;
 import static frc.robot.subsystems.elevator.ElevatorConfig.maxHeight;
 import static frc.robot.subsystems.elevator.ElevatorConfig.minHeight;
+import static frc.robot.util.Util.DT;
+import static frc.robot.util.Util.log;
 
 /**
  * Implements the {@link Motor} interface. It shows how to:
  *
  * <ul>
  *
- *     <li>Use a {@link ElevatorSim} to do a real physics-based
+ *     <li>Use a {@link ElevatorMotorSim} to do a real physics-based
  *     simulation of motors powering an elevator</li>
  *
  *     <li>Reverse the calculations of the sim to determine motor
@@ -34,7 +36,7 @@ import static frc.robot.subsystems.elevator.ElevatorConfig.minHeight;
  *
  * </ul>
  */
-public class SimElevator implements Motor {
+public class ElevatorMotorSim implements Motor {
 
     // g = 1.3028
     // v = 0.0991
@@ -45,25 +47,33 @@ public class SimElevator implements Motor {
     public static final double DRUM_RADIUS_IN = 1.0;
     public static final double GEAR_RATIO = 5.0;
 
-    ElevatorSim sim;
     DoubleConsumer display;
-    boolean brakeEnabled;
+    ElevatorSim sim;
+    double lastHeight;
+    double thisHeight;
+    double calculatedVelocity;
 
-    public SimElevator() {
+    public ElevatorMotorSim() {
 
         this.display = createWidget();
-
-        // this sequence will force the logic below to create a brand new
-        // sim object (see the logic in applyBrake)
-        this.sim = null;
-        this.brakeEnabled = false;
-        applyBrake(true);
+        this.sim = new ElevatorSim(
+            DCMotor.getNEO(NUM_MOTORS),
+            GEAR_RATIO,
+            Units.lbsToKilograms(MASS_LBS),
+            Units.inchesToMeters(DRUM_RADIUS_IN),
+            Units.inchesToMeters(minHeight.getAsDouble()),
+            Units.inchesToMeters(maxHeight.getAsDouble()),
+            true,
+            Units.inchesToMeters(minHeight.getAsDouble()));
+        this.lastHeight = Double.NaN;
+        this.thisHeight = Double.NaN;
+        this.calculatedVelocity = Double.NaN;
 
         applyVolts(0.0);
 
         SmartDashboard.putData("SimElevator", builder -> {
             builder.addDoubleProperty("SimHeight", this::getSimHeight, this::setHeight);
-            builder.addDoubleProperty("SimVelocity", this::getSimVelocity, null);
+            builder.addDoubleProperty("CalculatedVelocity", () -> calculatedVelocity, null);
         });
     }
 
@@ -97,7 +107,7 @@ public class SimElevator implements Motor {
      * the simulation logic
      */
     public double getSimHeight() {
-        return Units.metersToInches(sim.getPositionMeters());
+        return thisHeight;
     }
 
     /**
@@ -110,27 +120,21 @@ public class SimElevator implements Motor {
     }
 
     /**
-     * @return current velocity of the elevator in inches, as determined by
-     * the simulation logic
-     */
-    public double getSimVelocity() {
-        return Units.metersToInches(sim.getVelocityMetersPerSecond());
-    }
-
-    /**
      * @return the motor velocity, calculated from the simulation's
      * estimate of elevator velocity
      */
     @Override
     public double getVelocity() {
-        return getSimVelocity() / inchesPerRotation;
+        return calculatedVelocity / inchesPerRotation;
     }
 
     /**
      * Set the current height of the simulation in inches
      */
     public void setHeight(double inches) {
+        log("[elevator-sim] setting height to %.2f", inches);
         sim.setState(Units.inchesToMeters(inches), 0.0);
+        sim.update(DT);
     }
 
     /**
@@ -143,47 +147,19 @@ public class SimElevator implements Motor {
     }
 
     /**
-     * @return is the motor brake enabled?
+     * @return true (the sim always acts as if it has the brake on)
      */
     @Override
     public boolean isBrakeEnabled() {
-        return brakeEnabled;
+        return true;
     }
 
     /**
-     * Toggles the motor brake. This relies on a weird trick - the
-     * simulation has a parameter to enable the simulation of gravity.
-     * If the motor brake is enabled, we simply disable the simulation
-     * of gravity in the simulation.
+     * Toggles the motor brake
      */
     @Override
     public void applyBrake(boolean brake) {
-
-        // if we're switching brake status, we have to create a new
-        // simulation object (unfortunately you can't just toggle a flag)
-        if (brake != brakeEnabled) {
-            System.err.println("[sim] switching brake");
-
-            ElevatorSim newSim = new ElevatorSim(
-                    DCMotor.getNEO(NUM_MOTORS),
-                    GEAR_RATIO,
-                    Units.lbsToKilograms(MASS_LBS),
-                    Units.inchesToMeters(DRUM_RADIUS_IN),
-                    Units.inchesToMeters(minHeight.getAsDouble()),
-                    Units.inchesToMeters(maxHeight.getAsDouble()),
-                    !brake, // brake true ==> simulate gravity false
-                    Units.inchesToMeters(minHeight.getAsDouble()));
-
-            // if there's an existing sim, copy over its height and velocity
-            if (sim != null) {
-                newSim.setState(
-                        sim.getPositionMeters(),
-                        sim.getVelocityMetersPerSecond());
-            }
-
-            sim = newSim;
-            brakeEnabled = brake;
-        }
+        log("[elevator-sim] the sim does not model brake toggling");
     }
 
     /**
@@ -191,8 +167,20 @@ public class SimElevator implements Motor {
      */
     @Override
     public void applyVolts(double volts) {
+
         sim.setInputVoltage(volts);
-        sim.update(0.02);
-        display.accept(Units.metersToInches(sim.getPositionMeters()));
+        sim.update(DT);
+
+        thisHeight = Units.metersToInches(sim.getPositionMeters());
+
+        // for some reason the sim calculates the wrong velocity under
+        // certain circumstances, so we'll just calculate it ourselves
+        // based on the observed height of the elevator
+        if (Double.isFinite(lastHeight)) {
+            calculatedVelocity = (thisHeight - lastHeight) / DT;            
+        }
+        lastHeight = thisHeight;
+
+        display.accept(thisHeight);
     }
 }

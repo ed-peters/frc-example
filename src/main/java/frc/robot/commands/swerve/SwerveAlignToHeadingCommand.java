@@ -1,16 +1,17 @@
-package frc.example.swerve;
+package frc.robot.commands.swerve;
 
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
-import frc.example.PDController;
-import frc.example.Util;
+import frc.robot.util.PDController;
+import frc.robot.util.Util;
+import frc.robot.subsystems.swerve.SwerveDriveSubsystem;
 
-import static frc.example.swerve.SwerveAlignConfig.toHeadingMaxFeedback;
-import static frc.example.swerve.SwerveAlignConfig.toHeadingP;
-import static frc.example.swerve.SwerveAlignConfig.toHeadingD;
-import static frc.example.swerve.SwerveAlignConfig.toHeadingTolerance;
+import static frc.robot.commands.swerve.SwerveAlignConfig.toHeadingMaxFeedback;
+import static frc.robot.commands.swerve.SwerveAlignConfig.toHeadingP;
+import static frc.robot.commands.swerve.SwerveAlignConfig.toHeadingD;
+import static frc.robot.commands.swerve.SwerveAlignConfig.toHeadingTolerance;
 
 /**
  * Implements automatically aligning the robot to a target heading.

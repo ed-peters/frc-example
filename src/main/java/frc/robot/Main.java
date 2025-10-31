@@ -5,12 +5,12 @@
 package frc.robot;
 
 import edu.wpi.first.wpilibj.RobotBase;
-import frc.robot.testbots.ElevatorRobot;
+import frc.robot.testbots.ElevatorSimRobot;
 
 public final class Main {
   private Main() {}
 
   public static void main(String... args) {
-    RobotBase.startRobot(ElevatorRobot::new);
+    RobotBase.startRobot(ElevatorSimRobot::new);
   }
 }

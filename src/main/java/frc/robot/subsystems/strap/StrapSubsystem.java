@@ -1,4 +1,4 @@
-package frc.example.rail;
+package frc.robot.subsystems.strap;
 
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
@@ -6,15 +6,15 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.example.Motor;
-import frc.example.Util;
+import frc.robot.util.Motor;
+import frc.robot.util.Util;
 
 import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 
-import static frc.example.rail.StrapConfig.closeStallVelocity;
-import static frc.example.rail.StrapConfig.closeVolts;
-import static frc.example.rail.StrapConfig.defaultBrakeEnabled;
+import static frc.robot.subsystems.strap.StrapConfig.closeStallVelocity;
+import static frc.robot.subsystems.strap.StrapConfig.closeVolts;
+import static frc.robot.subsystems.strap.StrapConfig.defaultBrakeEnabled;
 
 /**
  * Example of a subsystem controlling a mechanical strap based on the

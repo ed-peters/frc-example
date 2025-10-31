@@ -1,20 +1,20 @@
-package frc.example.swerve;
+package frc.robot.commands.swerve;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
-import frc.example.Dash;
-import frc.example.ProfiledPDController;
-import frc.example.Util;
+import frc.robot.util.Dash;
+import frc.robot.util.ProfiledPDController;
+import frc.robot.util.Util;
 import frc.robot.subsystems.swerve.SwerveDriveSubsystem;
 
-import static frc.example.swerve.SwerveAlignConfig.pidAcceleration;
-import static frc.example.swerve.SwerveAlignConfig.pidD;
-import static frc.example.swerve.SwerveAlignConfig.pidMaxVelocity;
-import static frc.example.swerve.SwerveAlignConfig.pidP;
-import static frc.example.swerve.SwerveAlignConfig.pidTolerance;
+import static frc.robot.commands.swerve.SwerveAlignConfig.pidAcceleration;
+import static frc.robot.commands.swerve.SwerveAlignConfig.pidD;
+import static frc.robot.commands.swerve.SwerveAlignConfig.pidMaxVelocity;
+import static frc.robot.commands.swerve.SwerveAlignConfig.pidP;
+import static frc.robot.commands.swerve.SwerveAlignConfig.pidTolerance;
 
 /**
  * Moves the robot a fixed distance from its starting pose using
