@@ -18,7 +18,7 @@
   {
     "name": "/Preferences/ElevatorSubsystem/MaxVelocity",
     "type": "double",
-    "value": 30.0,
+    "value": 120.0,
     "properties": {
       "persistent": true
     }
@@ -26,7 +26,7 @@
   {
     "name": "/Preferences/ElevatorSubsystem/Acceleration",
     "type": "double",
-    "value": 2.0,
+    "value": 4.0,
     "properties": {
       "persistent": true
     }
@@ -66,7 +66,7 @@
   {
     "name": "/Preferences/ElevatorSubsystem/G",
     "type": "double",
-    "value": 2.5396,
+    "value": 1.3028,
     "properties": {
       "persistent": true
     }
@@ -74,7 +74,7 @@
   {
     "name": "/Preferences/ElevatorSubsystem/V",
     "type": "double",
-    "value": 0.1,
+    "value": 0.0992,
     "properties": {
       "persistent": true
     }
@@ -107,14 +107,6 @@
     "name": "/Preferences/ElevatorSubsystem/L3",
     "type": "double",
     "value": 80.0,
-    "properties": {
-      "persistent": true
-    }
-  },
-  {
-    "name": "/Preferences/ElevatorSubsystem/TuningVelocity",
-    "type": "double",
-    "value": 0.0,
     "properties": {
       "persistent": true
     }

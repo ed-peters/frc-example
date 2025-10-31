@@ -21,7 +21,7 @@ public class ElevatorConfig {
     public static final DoubleSupplier maxHeight = pref("ElevatorSubsystem/MaxHeight", 90.0);
 
     /** Maximum velocity when moving between presets */
-    public static final DoubleSupplier maxVelocity = pref("ElevatorSubsystem/MaxVelocity", 30.0);
+    public static final DoubleSupplier maxVelocity = pref("ElevatorSubsystem/MaxVelocity", 120.0);
 
     /** Acceleration factor for moving between presets (2.0 means top speed in 0.5s) */
     public static final DoubleSupplier accelerationFactor = pref("ElevatorSubsystem/Acceleration", 2.0);
@@ -42,7 +42,7 @@ public class ElevatorConfig {
     public static final DoubleSupplier g = pref("ElevatorSubsystem/G", 1.3028);
 
     /** Feedforward constant */
-    public static final DoubleSupplier v = pref("ElevatorSubsystem/V", 0.1);
+    public static final DoubleSupplier v = pref("ElevatorSubsystem/V", 0.0992);
 
     /** Tolerance for how close we have to be before we decide we're "on target" */
     public static final DoubleSupplier tolerance = pref("ElevatorSubsystem/Tolerance", 0.25);

@@ -160,6 +160,10 @@ public class SwerveTeleopSpeedSupplier implements Supplier<ChassisSpeeds> {
                 lastY *= tf;
                 break;
 
+            // nothing to do here
+            case NONE:
+                break;
+
         }
 
         return new ChassisSpeeds(

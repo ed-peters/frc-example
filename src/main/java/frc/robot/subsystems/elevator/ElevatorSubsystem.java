@@ -29,6 +29,7 @@ import static frc.robot.subsystems.elevator.ElevatorConfig.presetL2;
 import static frc.robot.subsystems.elevator.ElevatorConfig.presetL3;
 import static frc.robot.subsystems.elevator.ElevatorConfig.tolerance;
 import static frc.robot.subsystems.elevator.ElevatorConfig.v;
+import static frc.robot.util.Util.DT;
 
 /**
  * Example of an elevator subsystem based on the 2025 Reefscape robot.
@@ -69,9 +70,11 @@ public class ElevatorSubsystem extends SubsystemBase {
     TrapezoidProfile profile;
     String currentCommand;
     double goalHeight;
+    double targetHeight;
+    double lastHeight;
+    double currentVelocity;
+    double targetVelocity;
     double timeToGoal;
-    double nextHeight;
-    double nextVelocity;
     double lastFeedforward;
     double lastFeedback;
     double lastVolts;
@@ -83,8 +86,10 @@ public class ElevatorSubsystem extends SubsystemBase {
         this.currentCommand = "";
         this.goalHeight = Double.NaN;
         this.timeToGoal = Double.NaN;
-        this.nextHeight = Double.NaN;
-        this.nextVelocity = Double.NaN;
+        this.lastHeight = Double.NaN;
+        this.currentVelocity = Double.NaN;
+        this.targetHeight = Double.NaN;
+        this.targetVelocity = Double.NaN;
         this.lastFeedforward = Double.NaN;
         this.lastFeedback = Double.NaN;
         this.lastVolts = Double.NaN;
@@ -99,11 +104,11 @@ public class ElevatorSubsystem extends SubsystemBase {
             builder.addDoubleProperty("HeightCurrent", this::getHeight, null);
             builder.addDoubleProperty("HeightError", pid::getError, null);
             builder.addDoubleProperty("HeightGoal", () -> goalHeight, null);
-            builder.addDoubleProperty("HeightNext", () -> nextHeight, null);
+            builder.addDoubleProperty("HeightTarget", () -> targetHeight, null);
             builder.addDoubleProperty("TimeToGoal", () -> timeToGoal, null);
             builder.addDoubleProperty("VelocityCurrent", this::getVelocity, null);
-            builder.addDoubleProperty("VelocityError", () -> nextVelocity - getVelocity(), null);
-            builder.addDoubleProperty("VelocityNext", () -> nextVelocity, null);
+            builder.addDoubleProperty("VelocityError", () -> targetVelocity - getVelocity(), null);
+            builder.addDoubleProperty("VelocityTarget", () -> targetVelocity, null);
             builder.addBooleanProperty("AtGoal?", this::atGoal, null);
             builder.addBooleanProperty("Brake?", motor::isBrakeEnabled, motor::applyBrake);
         });
@@ -116,7 +121,7 @@ public class ElevatorSubsystem extends SubsystemBase {
 
     /** @return the elevator's current velocity in inches per second */
     public double getVelocity() {
-        return motor.getVelocity() * inchesPerRotation;
+        return currentVelocity; // motor.getVelocity() * inchesPerRotation;
     }
 
     /**
@@ -141,11 +146,11 @@ public class ElevatorSubsystem extends SubsystemBase {
      * this has the side effect of clearing all the target information
      * (including the goal height)
      */
-    private void openLoop(String command, double volts) {
+    public void openLoop(String command, double volts) {
         currentCommand = command;
         goalHeight = Double.NaN;
-        nextHeight = Double.NaN;
-        nextVelocity = Double.NaN;
+        targetHeight = Double.NaN;
+        targetVelocity = Double.NaN;
         lastFeedforward = Double.NaN;
         lastFeedback = Double.NaN;
         lastVolts = Util.clampVolts(volts);
@@ -156,7 +161,7 @@ public class ElevatorSubsystem extends SubsystemBase {
      * Reset the PID controller and trapezoid profile to reflect the
      * most recent configuration, and clear calculated error
      */
-    private void resetPidAndProfile() {
+    public void resetPidAndProfile() {
 
         // reset the PID
         pid.reset();
@@ -172,18 +177,27 @@ public class ElevatorSubsystem extends SubsystemBase {
      * Run the elevator in closed-loop mode by specifying a "next" height
      * and velocity, and an optional final goal height
      */
-    private void closedLoop(String command,
+    public void closedLoop(String command,
                             double height,
                             double velocity,
                             double goal) {
         currentCommand = command;
         goalHeight = goal;
-        nextHeight = MathUtil.clamp(height, minHeight.getAsDouble(), maxHeight.getAsDouble());
-        nextVelocity = Util.applyClamp(velocity, maxVelocity);
-        lastFeedforward = g.getAsDouble() + v.getAsDouble() * nextVelocity;
-        lastFeedback = pid.calculate(getHeight(), nextHeight);
+        targetHeight = MathUtil.clamp(height, minHeight.getAsDouble(), maxHeight.getAsDouble());
+        targetVelocity = Util.applyClamp(velocity, maxVelocity);
+        lastFeedforward = g.getAsDouble() + v.getAsDouble() * targetVelocity;
+        lastFeedback = pid.calculate(getHeight(), targetHeight);
         lastVolts = Util.clampVolts(lastFeedforward + lastFeedback);
         motor.applyVolts(lastVolts);
+    }
+
+    @Override
+    public void periodic() {
+        double currentHeight = getHeight();
+        if (Double.isFinite(lastHeight)) {
+            currentVelocity = (currentHeight - lastHeight) / DT;
+        }
+        lastHeight = currentHeight;
     }
 
     /**
@@ -191,7 +205,7 @@ public class ElevatorSubsystem extends SubsystemBase {
      * voltage controlled by a joystick
      */
     public Command teleopCommand(DoubleSupplier supplier) {
-        return run(() -> {
+        Command command = run(() -> {
             double input = supplier.getAsDouble() * maxTeleopVolts.getAsDouble();
             if (input > 0.0) {
                 openLoop("tele-up", input);
@@ -199,6 +213,8 @@ public class ElevatorSubsystem extends SubsystemBase {
                 openLoop("tele-down", input);
             }
         });
+        command.setName("ElevatorTeleopCommand");
+        return command;
     }
 
     /**
@@ -207,9 +223,11 @@ public class ElevatorSubsystem extends SubsystemBase {
      * the elevator may come crashing down)
      */
     public Command releaseCommand() {
-        return run(() -> {
+        Command command = run(() -> {
             openLoop("release", 0.0);
         });
+        command.setName("ElevatorReleaseCommand");
+        return command;
     }
 
     /**
@@ -221,12 +239,11 @@ public class ElevatorSubsystem extends SubsystemBase {
         // this allows setting velocity from the dashboard
         SmartDashboard.putNumber(TUNING_VELOCITY_KEY, 0.0);
 
-        return new Command() {
+        Command command = new Command() {
 
             // every cycle we will calculate a new target height and velocity
             double tuningHeight;
             double tuningVelocity;
-            double tuningGoal;
 
             @Override
             public void initialize() {
@@ -238,15 +255,6 @@ public class ElevatorSubsystem extends SubsystemBase {
                 tuningHeight = getHeight();
                 tuningVelocity = SmartDashboard.getNumber(TUNING_VELOCITY_KEY, 0.0);
 
-                // our goal depends on the velocity
-                if (tuningVelocity < 0.0) {
-                    tuningGoal = minHeight.getAsDouble();
-                } else if (tuningVelocity > maxVelocity.getAsDouble()) {
-                    tuningGoal = maxVelocity.getAsDouble();
-                } else {
-                    tuningGoal = tuningHeight;
-                }
-
                 Util.log("[elevator] tuning from %.2f @ %.2f", tuningHeight, tuningVelocity);
             }
 
@@ -254,7 +262,7 @@ public class ElevatorSubsystem extends SubsystemBase {
             public void execute() {
 
                 // apply the target height and velocity
-                closedLoop("tuning", tuningHeight, tuningVelocity, tuningGoal);
+                closedLoop("tuning", tuningHeight, tuningVelocity, Double.NaN);
 
                 // if we haven't yet hit the limits, calculate next height
                 // based on velocity
@@ -265,19 +273,22 @@ public class ElevatorSubsystem extends SubsystemBase {
                 }
             }
         };
+        command.addRequirements(this);
+        command.setName("ElevatorTuningCommand");
+        return command;
     }
 
     /**
      * @return a command that will move the elevator to a specific height
      * using a trapezoid motion profile
      */
-    public Command trapezoidCommand(String command, DoubleSupplier heightSupplier) {
+    public Command trapezoidCommand(String name, DoubleSupplier heightSupplier) {
 
-        return new Command() {
+        Command command = new Command() {
 
             final Timer timer = new Timer();
             State startState;
-            State finalState;
+            State finalState;            
 
             @Override
             public void initialize() {
@@ -290,7 +301,7 @@ public class ElevatorSubsystem extends SubsystemBase {
                 finalState = new State(heightSupplier.getAsDouble(), 0.0);
 
                 Util.log("[elevator] moving to %s @ %.2f",
-                        command,
+                        name,
                         finalState.position);
 
                 timeToGoal = profile.totalTime();
@@ -302,7 +313,7 @@ public class ElevatorSubsystem extends SubsystemBase {
             public void execute() {
                 double now = timer.get();
                 State next = profile.calculate(now, startState, finalState);
-                closedLoop(command, next.position, next.velocity, finalState.position);
+                closedLoop(name, next.position, next.velocity, finalState.position);
                 timeToGoal = profile.totalTime() - now;
             }
 
@@ -316,12 +327,15 @@ public class ElevatorSubsystem extends SubsystemBase {
                 // we finish when time has expired on the profiled motion
                 // if the elevator isn't properly tuned, we might not have made it
                 if (!atGoal()) {
-                    Util.log("[elevator] !!! MISSED goal %s !!!", command);
+                    Util.log("[elevator] !!! MISSED goal %s !!!", name);
                 }
                 timer.stop();
                 timeToGoal = Double.NaN;
             }
         };
+        command.addRequirements(this);;
+        command.setName("ElevatorTrapezoidCommnd-"+command);
+        return command;
     }
 
     /**
@@ -339,26 +353,40 @@ public class ElevatorSubsystem extends SubsystemBase {
      * in teleop mode)
      */
     public Command holdCommand() {
-        return run(() -> {
 
-            double holdHeight;
+        Command command = new Command() {
 
-            // if there IS a target height, let's keep holding at that height
-            // (this will ensure a smooth transition if a trapezoid motion
-            // command just finished)
-            if (Double.isFinite(nextHeight)) {
-                holdHeight = nextHeight;
+            @Override
+            public void initialize() {
+                resetPidAndProfile();
             }
 
-            // otherwise, we were probably just in teleop mode or something;
-            // we will just hold still at the current height
-            else {
-                holdHeight = getHeight();
+            @Override
+            public void execute() {
+
+                double holdHeight;
+
+                // if there IS a target height, let's keep holding at that height
+                // (this will ensure a smooth transition if a trapezoid motion
+                // command just finished)
+                if (Double.isFinite(targetHeight)) {
+                    holdHeight = targetHeight;
+                }
+
+                // otherwise, we were probably just in teleop mode or something;
+                // we will just hold still at the current height
+                else {
+                    holdHeight = getHeight();
+                }
+
+                // note that we totally ignore the goal height here; if we just
+                // finished a trapezoid command, we want to keep it the same
+                closedLoop("hold", holdHeight, 0.0, Double.NaN);
             }
 
-            // note that we totally ignore the goal height here; if we just
-            // finished a trapezoid command, we want to keep it the same
-            closedLoop("hold", holdHeight, 0.0, goalHeight);
-        });
+        };
+        command.addRequirements(this);
+        command.setName("ElevatorHoldCommand");
+        return command;
     }
 }

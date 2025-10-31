@@ -26,19 +26,25 @@ public class ElevatorSimRobot extends TimedRobot {
         // mapping for tuning
         // default behavior is to release the motor (apply 0 voltage)
         // only button mapped are for tuning and setting sim height
-        elevator.setDefaultCommand(elevator.releaseCommand());
-        controller.a().whileTrue(elevator.tuningCommand());
-        controller.b().onTrue(elevator.runOnce(() -> {
+        // elevator.setDefaultCommand(elevator.releaseCommand());
+        // controller.a().whileTrue(elevator.tuningCommand());
+        // controller.b().whileTrue(elevator.holdCommand());
+        // controller.x().onTrue(elevator.runOnce(() -> {
+        //     System.out.println("setting sim height");
+        //     sim.setHeight(70.0);
+        // }));
+
+        // mapping for presets
+        // default behavior is to hold still (should be tuned accurately)
+        // buttons are mapped to different preset heights
+        elevator.setDefaultCommand(elevator.holdCommand());
+        controller.a().onTrue(elevator.presetCommand(Preset.L1));
+        controller.b().onTrue(elevator.presetCommand(Preset.L3));        
+        controller.x().whileTrue(elevator.releaseCommand());
+        controller.y().onTrue(elevator.runOnce(() -> {
             System.out.println("setting sim height");
             sim.setHeight(70.0);
         }));
-
-        // elevator.setDefaultCommand(elevator.holdCommand());
-        // controller.x().whileTrue(elevator.tuningCommand());
-        // controller.y().onTrue(elevator.presetCommand(Preset.L1));
-        // controller.a().onTrue(elevator.presetCommand(Preset.L2));
-        // controller.b().onTrue(elevator.presetCommand(Preset.L3));
-        
     }
 
     @Override

@@ -39,7 +39,7 @@ import static frc.robot.util.Util.log;
 public class ElevatorMotorSim implements Motor {
 
     // g = 1.3028
-    // v = 0.0991
+    // v = 0.0992
 
     // Physical elevator description
     public static final int NUM_MOTORS = 2;
