@@ -5,7 +5,6 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
-import frc.robot.util.Dash;
 import frc.robot.util.ProfiledPDController;
 import frc.robot.util.Util;
 import frc.robot.subsystems.swerve.SwerveDriveSubsystem;
@@ -21,6 +20,8 @@ import static frc.robot.commands.swerve.SwerveAlignConfig.pidTolerance;
  * a pair of profiled PID controllers
  */
 public class SwerveAlignPidCommand extends Command {
+
+    public static final String KEY_POSE = "AlignPid";
 
     private final SwerveDriveSubsystem drive;
     private final ProfiledPDController pidX;
@@ -67,7 +68,6 @@ public class SwerveAlignPidCommand extends Command {
         finalPose = new Pose2d(
                 startPose.getTranslation().plus(offset),
                 startPose.getRotation());
-        Dash.publish("AlignPidTarget", finalPose);
 
         // reset controller error and configuration
         pidX.reset();
@@ -92,6 +92,9 @@ public class SwerveAlignPidCommand extends Command {
         // see if we've made it
         doneX = pidX.atGoal();
         doneY = pidY.atGoal();
+
+        // publish where we're going
+        drive.publishPose(KEY_POSE, finalPose);
     }
 
     @Override
@@ -118,6 +121,6 @@ public class SwerveAlignPidCommand extends Command {
             Util.log("[align-pid] !!! FAILED aligning to tag in %s !!!", which);
         }
 
-        Dash.publish("AlignPidTarget", Util.NAN_POSE);
+        drive.publishPose(KEY_POSE, Util.NAN_POSE);
     }
 }

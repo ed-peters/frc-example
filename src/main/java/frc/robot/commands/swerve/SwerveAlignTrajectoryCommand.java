@@ -11,7 +11,6 @@ import edu.wpi.first.math.trajectory.TrajectoryGenerator;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
-import frc.robot.util.Dash;
 import frc.robot.util.PDController;
 import frc.robot.util.ProfiledPDController;
 import frc.robot.util.Util;
@@ -33,8 +32,8 @@ import static frc.robot.commands.swerve.SwerveAlignConfig.trajectoryTranslateP;
  */
 public class SwerveAlignTrajectoryCommand extends Command {
 
-    public static final String KEY_POSE_NEXT = "SwerveDrive/Structs/PoseTrajectoryNext";
-    public static final String KEY_POSE_FINAL = "SwerveDrive/Structs/PoseTrajectoryFinal";
+    public static final String KEY_POSE_NEXT = "AlignTrajectory-Next";
+    public static final String KEY_POSE_FINAL = "AlignTrajectory-Final";
 
     final SwerveDriveSubsystem drive;
     final Translation2d offset;
@@ -86,7 +85,7 @@ public class SwerveAlignTrajectoryCommand extends Command {
         finalPose = new Pose2d(
                 startPose.getTranslation().plus(offset),
                 startPose.getRotation());
-        Dash.publish(KEY_POSE_FINAL, finalPose);
+        drive.publishPose(KEY_POSE_FINAL, finalPose);
 
         Util.log("[align-trajectory] calculating trajectory to %s", finalPose);
 
@@ -122,7 +121,7 @@ public class SwerveAlignTrajectoryCommand extends Command {
 
         // use the trajectory to calculate the next desired pose
         State nextState = trajectory.sample(timer.get());
-        Dash.publish(KEY_POSE_NEXT, nextState.poseMeters);
+        drive.publishPose(KEY_POSE_NEXT, nextState.poseMeters);
 
         // use the controller to calculate the speeds required to
         // get us there
@@ -152,5 +151,8 @@ public class SwerveAlignTrajectoryCommand extends Command {
         }
 
         timer.stop();
+
+        drive.publishPose(KEY_POSE_FINAL, Util.NAN_POSE);
+        drive.publishPose(KEY_POSE_NEXT, Util.NAN_POSE);
     }
 }

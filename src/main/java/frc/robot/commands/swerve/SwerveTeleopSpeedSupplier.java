@@ -90,8 +90,8 @@ public class SwerveTeleopSpeedSupplier implements Supplier<ChassisSpeeds> {
             builder.addDoubleProperty("InputY", () -> inY, null);
             builder.addDoubleProperty("InputOmega", () -> inO, null);
             builder.addDoubleProperty("SpeedX", () -> lastX, null);
-            builder.addDoubleProperty("SpeedY", () -> lastX, null);
-            builder.addDoubleProperty("SpeedOmega", () -> lastX, null);
+            builder.addDoubleProperty("SpeedY", () -> lastY, null);
+            builder.addDoubleProperty("SpeedOmega", () -> lastOmega, null);
         });
     }
 

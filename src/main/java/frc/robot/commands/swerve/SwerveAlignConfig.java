@@ -15,17 +15,11 @@ public class SwerveAlignConfig {
     // ALIGN TO HEADING
     // ==================================================================
 
-    /** Feedback constant for aligning to a heading: P */
+    /** Properties for aligning to a heading */
     public static DoubleSupplier toHeadingP = pref("AlignToHeading/P", 10.0);
-
-    /** Feedback constant for aligning to a heading: D */
-    public static DoubleSupplier toHeadingD = pref("AlignToHeading/D", 10.0);
-
-    /** Tolerance in degrees for aligning to a heading */
-    public static DoubleSupplier toHeadingTolerance = pref("AlignToHeading/Tolerance", 10.0);
-
-    /** Maximum turn rate for aligning to a heading in degrees per second */
-    public static DoubleSupplier toHeadingMaxFeedback = pref("AlignToHeading/MaxFeedback", 10.0);
+    public static DoubleSupplier toHeadingD = pref("AlignToHeading/D", 0.0);
+    public static DoubleSupplier toHeadingTolerance = pref("AlignToHeading/Tolerance", 1.0);
+    public static DoubleSupplier toHeadingMaxFeedback = pref("AlignToHeading/MaxFeedback", 120.0);
 
     // ==================================================================
     // ALIGN TO APRIL TAG

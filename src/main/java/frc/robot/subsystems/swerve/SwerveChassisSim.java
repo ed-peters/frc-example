@@ -8,17 +8,18 @@ import edu.wpi.first.math.kinematics.SwerveModuleState;
 
 import static frc.robot.subsystems.swerve.SwerveConfig.kinematics;
 
-public class SimSwerveDrive implements SwerveChassis {
+public class SwerveChassisSim implements SwerveChassis {
 
     double heading;
     double [] velocity;
     double [] angle;
     double [] distance;
 
-    public SimSwerveDrive() {
-        velocity = new double[4];
-        angle = new double[4];
-        distance = new double[4];
+    public SwerveChassisSim() {
+        heading = 0.0;
+        velocity = new double[]{ 0.0, 0.0, 0.0, 0.0 };
+        angle = new double[]{ 0.0, 0.0, 0.0, 0.0 };
+        distance = new double[]{ 0.0, 0.0, 0.0, 0.0 };
     }
 
     @Override

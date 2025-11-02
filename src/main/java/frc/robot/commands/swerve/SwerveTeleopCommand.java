@@ -121,9 +121,10 @@ public class SwerveTeleopCommand extends Command {
                 speeds.vyMetersPerSecond);
 
         // if we're moving slowly, or the driver is actively rotating
-        // the robot, we will accept the current heading as the "true"
+        // the robot, or we don't already have a target heading,
+        // we will accept the current heading as the "true"
         // target heading
-        if (translateSpeed > 0.1 || Util.isRotating(speeds)) {
+        if (translateSpeed > 0.1 || Util.isRotating(speeds) || Double.isNaN(targetHeading)) {
             targetHeading = currentHeading;
             lastDrift = Double.NaN;
             lastCorrection = Double.NaN;
