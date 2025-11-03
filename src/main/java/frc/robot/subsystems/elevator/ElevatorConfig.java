@@ -11,49 +11,66 @@ import static frc.robot.util.Util.pref;
  */
 public class ElevatorConfig {
 
-    /** How many inches the elevator travels per motor rotation */
+    /**
+     * How many inches the elevator travels per motor rotation; this is
+     * used to calculate height and velocity from the motor
+     */
     public static final double inchesPerRotation = 1.35;
 
-    /** Minimum height of elevator in inches */
+    /**
+     * Minimum and maximum height of elevator in inches; used to prevent
+     * us from going to far
+     */
     public static final DoubleSupplier minHeight = pref("ElevatorSubsystem/MinHeight", 1.0);
-
-    /** Maximum height of elevator in inches */
     public static final DoubleSupplier maxHeight = pref("ElevatorSubsystem/MaxHeight", 90.0);
 
-    /** Maximum velocity when moving between presets */
+    /**
+     * Maximum velocity when moving between presets; used to prevent us
+     * from going too fast
+     */
     public static final DoubleSupplier maxVelocity = pref("ElevatorSubsystem/MaxVelocity", 120.0);
 
-    /** Acceleration factor for moving between presets (2.0 means top speed in 0.5s) */
+    /**
+     * Acceleration factor for moving between presets (multiplied by the max
+     * velocity to get acceleration; 2.0 means it takes 0.5s to reach top
+     * speed)
+     */
     public static final DoubleSupplier accelerationFactor = pref("ElevatorSubsystem/Acceleration", 2.0);
 
-    /** Maximum voltage in teleop for moving elevator upwards */
+    /**
+     * Maximum voltage in teleop for moving elevator; see
+     * {@link frc.robot.commands.elevator.ElevatorTuningCommand}
+     */
     public static final DoubleSupplier maxTeleopVolts = pref("ElevatorSubsystem/TeleopVolts", 6.0);
 
-    /** PID constant */
+    /**
+     * Feedforward and feedback tuning constants; you'll determine values
+     * for these using the {@link frc.robot.commands.elevator.ElevatorTuningCommand}
+     */
     public static final DoubleSupplier p = pref("ElevatorSubsystem/P", 3.0);
-
-    /** PID constant */
     public static final DoubleSupplier d = pref("ElevatorSubsystem/D", 0.3);
-
-    /** Maximum feedback from PID controls */
-    public static final DoubleSupplier maxFeedback = pref("ElevatorSubsystem/MaxFeedback", 2.0);
-
-    /** Feedforward constant */
     public static final DoubleSupplier g = pref("ElevatorSubsystem/G", 1.3028);
-
-    /** Feedforward constant */
     public static final DoubleSupplier v = pref("ElevatorSubsystem/V", 0.0992);
 
-    /** Tolerance for how close we have to be before we decide we're "on target" */
+    /**
+     * Maximum feedback from feedback; you will probably want to keep this
+     * to low single digits. If it's too high, you could wind up with a
+     * "mousetrap" effect if the
+     */
+    public static final DoubleSupplier maxFeedback = pref("ElevatorSubsystem/MaxFeedback", 2.0);
+
+    /**
+     * Tolerance for how close (in inches) we have to be before we consider
+     * ourselves to be "at" a goal height
+     */
     public static final DoubleSupplier tolerance = pref("ElevatorSubsystem/Tolerance", 0.25);
 
-    /** Preset height */
+    /**
+     * Preset heights in inches, for things like scoring positions; see
+     * {@link ElevatorPreset} for how these get used
+     */
     public static final DoubleSupplier presetL1 = pref("ElevatorSubsystem/L1", 10.0);
-
-    /** Preset height */
     public static final DoubleSupplier presetL2 = pref("ElevatorSubsystem/L2", 40.0);
-
-    /** Preset height */
     public static final DoubleSupplier presetL3 = pref("ElevatorSubsystem/L3", 80.0);
 
 }

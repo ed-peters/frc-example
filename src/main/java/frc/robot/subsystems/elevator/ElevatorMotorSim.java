@@ -11,6 +11,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.util.Color;
 import edu.wpi.first.wpilibj.util.Color8Bit;
 import frc.robot.util.Motor;
+import frc.robot.util.Util;
 
 import java.util.function.DoubleConsumer;
 
@@ -18,7 +19,6 @@ import static frc.robot.subsystems.elevator.ElevatorConfig.inchesPerRotation;
 import static frc.robot.subsystems.elevator.ElevatorConfig.maxHeight;
 import static frc.robot.subsystems.elevator.ElevatorConfig.minHeight;
 import static frc.robot.util.Util.DT;
-import static frc.robot.util.Util.log;
 
 /**
  * Implements the {@link Motor} interface. It shows how to:
@@ -35,6 +35,10 @@ import static frc.robot.util.Util.log;
  *     for visualizing the state of a physical mechanism</li>
  *
  * </ul>
+ *
+ * This guy is mainly for doing stuff like practicing tuning, or
+ * debugging elevator-related commands. It does not implement any
+ * logic around motor braking.
  */
 public class ElevatorMotorSim implements Motor {
 
@@ -132,7 +136,7 @@ public class ElevatorMotorSim implements Motor {
      * Set the current height of the simulation in inches
      */
     public void setHeight(double inches) {
-        log("[elevator-sim] setting height to %.2f", inches);
+        Util.log("[elevator-sim] setting height to %.2f", inches);
         sim.setState(Units.inchesToMeters(inches), 0.0);
         sim.update(DT);
     }
@@ -155,11 +159,11 @@ public class ElevatorMotorSim implements Motor {
     }
 
     /**
-     * Toggles the motor brake
+     * We don't toggle the brake
      */
     @Override
     public void applyBrake(boolean brake) {
-        log("[elevator-sim] the sim does not model brake toggling");
+        Util.log("[elevator-sim] the sim does not model brake toggling");
     }
 
     /**
