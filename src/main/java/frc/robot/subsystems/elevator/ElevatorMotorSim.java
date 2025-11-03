@@ -21,7 +21,8 @@ import static frc.robot.subsystems.elevator.ElevatorConfig.minHeight;
 import static frc.robot.util.Util.DT;
 
 /**
- * Implements the {@link Motor} interface. It shows how to:
+ * Implements the {@link Motor} interface along with a physics-based
+ * simulation of an attached elevator. It shows how to:
  *
  * <ul>
  *

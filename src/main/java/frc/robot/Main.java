@@ -5,7 +5,6 @@
 package frc.robot;
 
 import edu.wpi.first.wpilibj.RobotBase;
-import frc.robot.testbots.ElevatorSimRobot;
 import frc.robot.testbots.SwerveSimRobot;
 
 public final class Main {
@@ -13,6 +12,6 @@ public final class Main {
 
   public static void main(String... args) {
     // RobotBase.startRobot(ElevatorSimRobot::new);
-    RobotBase.startRobot(SwerveSimRobot::new);
+     RobotBase.startRobot(SwerveSimRobot::new);
   }
 }

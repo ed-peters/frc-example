@@ -1,5 +1,6 @@
 package frc.robot.subsystems.intake;
 
+import edu.wpi.first.math.util.Units;
 import frc.robot.util.Util;
 
 import java.util.function.DoubleSupplier;
@@ -19,6 +20,9 @@ public class IntakeConfig {
 
     /** Circumference of wheel in feet */
     public static final double wheelCircumferenceFeet = (wheelDiameterInches * Math.PI) / 12.0;
+
+    /** Weight of the wheel in pounds */
+    public static final double wheelMassLbs = 0.62;
 
     /** Should the motor brake be enabled by default? */
     public static final boolean defaultBrakeEnabled = true;
