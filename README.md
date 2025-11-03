@@ -1,33 +1,16 @@
+# FRC Examples
+
+This is heavily-commented example code for implementing different common subsystems for FRC robots. It embeds some hard-won experience gathered over a few years of competition.
+
+It includes:
+
+* **Strap** - a very simple subsystem for driving open-loop behavior, with an implementation of "stall detection" that we found useful one year.
 
 
-# PD tuning info
+* **Intake** - a flywheel based subsystem, with support for closed loop based on rotation speed or linear speed, and some examples of using sensors
 
-* Parameters - accept these as config
-  * P
-  * D
-  * Max Feedback
-  * Tolerance
-* Metrics - report these to the dashboard
-  * Last Setpoint
-  * Last Measurement
-  * Last Error
-  * Last Correction
 
-# Dashboard
+* **Elevator** - a position based subsystem, with support for tuning and driving quickly and smoothly to preset positions using motion profiles
 
-* Connection settings
-  * Localhost
-  * Driver station
-  * IP address
-* NetworkTables tree
-  * Filter out preferences (see below)
-  * Do anything special for SmartDashboard?
-* Special views
-  * Preferences sheet
-  * Camera?
-  * Limelight?
-  * Oculus?
-  * Elevator?
-  * Arm?
-  * Special widget for PIDs?
-  * Special widget for drive?
+
+* **Swerve** - a swerve subsystem with commands for teleop mode (with a bunch of options we use every year) and various automatic targeting actions
