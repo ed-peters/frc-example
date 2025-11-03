@@ -5,11 +5,11 @@ import java.util.function.DoubleSupplier;
 import static frc.robot.util.Util.pref;
 
 /**
- * Configuration properties for the sample swerve subsystem. Stuff that
+ * Configuration properties for swerve targeting commands. Stuff that
  * will (probably) never change can simply be Java constants, but stuff
  * that we might tweak/tune should be in {@link edu.wpi.first.wpilibj.Preferences}
  */
-public class SwerveAlignConfig {
+public class SwerveTargetingConfig {
 
     // ==================================================================
     // ALIGN TO HEADING
@@ -41,31 +41,15 @@ public class SwerveAlignConfig {
     public static DoubleSupplier tagMaxFeedback = pref("AlignToTag/MaxFeedback", 10.0);
 
     // ==================================================================
-    // TRAJECTORY
+    // POSE OFFSET
     // ==================================================================
 
-    /** Properties for driving a trajectory (translation) */
-    public static DoubleSupplier trajectoryTranslateP = pref("AlignTrajectory/TranslateP", 10.0);
-    public static DoubleSupplier trajectoryTranslateD = pref("AlignTrajectory/TranslateD", 10.0);
-    public static DoubleSupplier trajectoryMaxTranslate = pref("AlignTrajectory/MaxTranslate", 10.0);
-
-    /** Properties for driving a trajectory (rotation) */
-    public static DoubleSupplier trajectoryRotateP = pref("AlignTrajectory/RotateP", 10.0);
-    public static DoubleSupplier trajectoryRotateD = pref("AlignTrajectory/RotateD", 10.0);
-    public static DoubleSupplier trajectoryMaxRotate = pref("AlignTrajectory/MaxRotate", 10.0);
-
-    /** Properties for driving a trajectory (all directions) */
-    public static DoubleSupplier trajectoryAcceleration = pref("AlignTrajectory/Acceleration", 10.0);
-    
-    // ==================================================================
-    // PID
-    // ==================================================================
-
-    /** Properties for driving via PID */
-    public static DoubleSupplier pidP = pref("AlignTrajectory/P", 10.0);
-    public static DoubleSupplier pidD = pref("AlignPID/D", 10.0);
-    public static DoubleSupplier pidMaxVelocity = pref("AlignPID/MaxVelocity", 10.0);
-    public static DoubleSupplier pidTolerance = pref("AlignPID/Tolerance", 10.0);
-    public static DoubleSupplier pidAcceleration = pref("AlignPID/Acceleration", 10.0);
+    /** Properties for driving to a pose offset */
+    public static DoubleSupplier toPoseP = pref("AlignPose/P", 0.0);
+    public static DoubleSupplier toPoseD = pref("AlignPose/D", 0.0);
+    public static DoubleSupplier toPoseMaxFeedback = pref("AlignPose/MaxFeedback", 10.0);
+    public static DoubleSupplier toPoseMaxVelocity = pref("AlignPose/MaxVelocity", 48.0);
+    public static DoubleSupplier toPoseTolerance = pref("AlignPose/Tolerance", 0.1);
+    public static DoubleSupplier toPoseAcceleration = pref("AlignPose/Acceleration", 2.0);
 
 }

@@ -23,16 +23,19 @@ import java.util.function.Supplier;
  *     <li>Align the robot in the X and Y directions to be directly
  *     "in front" of the tag; and,</li>
  *
- *     <li>Optionally, drive to an offset of the "right in front of
+ *     <li>Optionally, drive to an offset of the "directly in front of
  *     the tag" position</li>
  *
  * </ul>
+ *
+ * This is modeled on what we did for automated scoring in the 2025
+ * Reefscape game
  */
-public class SwerveAprilTargetCommand extends DeferredCommand {
+public class SwerveFullTargetingSequenceCommand extends DeferredCommand {
 
-    public SwerveAprilTargetCommand(SwerveDriveSubsystem drive,
-                                    Supplier<AprilTarget> targetSupplier,
-                                    Supplier<Translation2d> translationSupplier) {
+    public SwerveFullTargetingSequenceCommand(SwerveDriveSubsystem drive,
+                                              Supplier<AprilTarget> targetSupplier,
+                                              Supplier<Translation2d> translationSupplier) {
         super(() -> createCommands(drive, targetSupplier, translationSupplier), Set.of(drive));
     }
 
@@ -50,13 +53,13 @@ public class SwerveAprilTargetCommand extends DeferredCommand {
 
         // we are going to rotate to face the tag; this means our heading
         // will be 180 degrees off from the tag
-        Command rotate = new SwerveAlignToHeadingCommand(
+        Command rotate = new SwerveTargetHeadingCommand(
                 drive,
                 target.pose().getRotation().plus(Rotation2d.k180deg));
 
         // next we are going to align ourselves to be directly in front
         // of the target
-        Command align = new SwerveAlignToTagCommand(
+        Command align = new SwerveTargetAprilTagCommand(
                 drive,
                 targetSupplier);
 
@@ -71,7 +74,7 @@ public class SwerveAprilTargetCommand extends DeferredCommand {
         }
 
         // if not, we're going to translate as well
-        Command translate = new SwerveAlignTrajectoryCommand(drive, offset);
+        Command translate = new SwerveTargetPoseOffsetCommand(drive, offset);
         Util.log("[april-target] preparing three-stage targeting");
         return rotate
                 .andThen(align)

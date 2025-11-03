@@ -108,11 +108,12 @@ public class SwerveTeleopSpeedSupplier implements Supplier<ChassisSpeeds> {
     @Override
     public ChassisSpeeds get() {
 
+        // get input from the joystick
         inX = x.getAsDouble();
         inY = y.getAsDouble();
         inO = omega.getAsDouble();
 
-        // get conditioned values for x, y, omega
+        // "condition" the values with deadband etc.
         lastX = conditionInput(inX);
         lastY = conditionInput(inY);
         lastOmega = conditionInput(inO);

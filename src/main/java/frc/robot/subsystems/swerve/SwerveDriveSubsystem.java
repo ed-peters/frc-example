@@ -20,9 +20,9 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
-import frc.robot.commands.swerve.SwerveAlignPidCommand;
+import frc.robot.commands.swerve.SwerveTargetPoseOffsetCommand;
 import frc.robot.util.Util;
-import frc.robot.commands.swerve.SwerveAlignToHeadingCommand;
+import frc.robot.commands.swerve.SwerveTargetHeadingCommand;
 import frc.robot.commands.swerve.SwerveTeleopCommand;
 import frc.robot.commands.swerve.SwerveTeleopSpeedSupplier;
 
@@ -39,9 +39,12 @@ import static frc.robot.subsystems.swerve.SwerveConfig.maximumWheelSpeed;
  */
 public class SwerveDriveSubsystem extends SubsystemBase {
 
-    public static final String POSE_LOGGING_PREFIX = "SmartDashboard/SwerveDriveSubsystem/Poses";
+    /** Prefix & loggers for logging pose structs */
+    public static final String POSE_LOGGING_PREFIX = "SmartDashboard/SwerveDriveSubsystem/Structs/";
+    static final Map<String, StructPublisher<Pose2d>> posePublishers = new HashMap<>();
 
-    static Map<String, StructPublisher<Pose2d>> posePublishers = new HashMap<>();
+    /** Implements a "quiet mode" to prevent spamming the dashboard during competition */
+    public static final boolean BE_QUIET = false;
 
     public enum Direction {
         NORTH,
@@ -85,15 +88,17 @@ public class SwerveDriveSubsystem extends SubsystemBase {
             builder.addDoubleProperty("Speed/X", () -> lastSpeeds.vxMetersPerSecond, null);
             builder.addDoubleProperty("Speed/Y", () -> lastSpeeds.vyMetersPerSecond, null);
             builder.addDoubleProperty("Speed/Omega", () -> Math.toDegrees(lastSpeeds.omegaRadiansPerSecond), null);
-            builder.addDoubleProperty("VisionPose/X", () -> lastVisionPose.getX(), null);
-            builder.addDoubleProperty("VisionPose/Y", () -> lastVisionPose.getY(), null);
-            builder.addDoubleProperty("VisionPose/Omega", () -> lastVisionPose.getRotation().getDegrees(), null);
-            builder.addDoubleProperty("FusedPose/X", () -> lastFusedPose.getX(), null);
-            builder.addDoubleProperty("FusedPose/Y", () -> lastFusedPose.getY(), null);
-            builder.addDoubleProperty("FusedPose/Omega", () -> lastFusedPose.getRotation().getDegrees(), null);
-            builder.addDoubleProperty("OdometryPose/X", () -> lastOdometryPose.getX(), null);
-            builder.addDoubleProperty("OdometryPose/Y", () -> lastOdometryPose.getY(), null);
-            builder.addDoubleProperty("OdometryPose/Omega", () -> lastOdometryPose.getRotation().getDegrees(), null);
+            if (!BE_QUIET) {
+                builder.addDoubleProperty("Poses/Vision/X", () -> lastVisionPose.getX(), null);
+                builder.addDoubleProperty("Poses/Vision/Y", () -> lastVisionPose.getY(), null);
+                builder.addDoubleProperty("Poses/Vision/Omega", () -> lastVisionPose.getRotation().getDegrees(), null);
+                builder.addDoubleProperty("Poses/Fused/X", () -> lastFusedPose.getX(), null);
+                builder.addDoubleProperty("Poses/Fused/Y", () -> lastFusedPose.getY(), null);
+                builder.addDoubleProperty("Poses/Fused/Omega", () -> lastFusedPose.getRotation().getDegrees(), null);
+                builder.addDoubleProperty("Poses/Odometry/X", () -> lastOdometryPose.getX(), null);
+                builder.addDoubleProperty("Poses/Odometry/Y", () -> lastOdometryPose.getY(), null);
+                builder.addDoubleProperty("Poses/Odometry/Omega", () -> lastOdometryPose.getRotation().getDegrees(), null);
+            }
         });
     }
 
@@ -110,7 +115,7 @@ public class SwerveDriveSubsystem extends SubsystemBase {
         return chassis.getHeading();
     }
 
-    /** @return the current pose as calculated purely on the odometry */
+    /** @return the pose as calculated purely on the odometry */
     public Pose2d getOdometryPose() {
         return odometry.getPoseMeters();
     }
@@ -127,8 +132,8 @@ public class SwerveDriveSubsystem extends SubsystemBase {
 
     /**
      * Add a vision pose to the estimator. The parameters indicate how much
-     * to "trust" the vision estimate, and approximately how old it is in
-     * seconds since the robot started up.
+     * to "trust" the vision estimate, and approximately how old it is (in
+     * seconds since the robot started up).
      */
     public void addVisionPose(Pose2d pose, Matrix<N3,N1> stdDevs, double timestamp) {
         estimator.setVisionMeasurementStdDevs(stdDevs);
@@ -244,9 +249,9 @@ public class SwerveDriveSubsystem extends SubsystemBase {
         lastOdometryPose = getOdometryPose();
 
         // publish them as structs so we can see them in advantage scope
-        publishPose("Fused", lastFusedPose);
-        publishPose("Odometry", lastOdometryPose);
-        publishPose("Vision", lastVisionPose);
+        publishPose("FusedPose", lastFusedPose);
+        publishPose("OdometryPose", lastOdometryPose);
+        publishPose("VisionPose", lastVisionPose);
     }
 
     /**
@@ -262,7 +267,7 @@ public class SwerveDriveSubsystem extends SubsystemBase {
         // it shows up next to other values we publish)
         if (publisher == null) {
             publisher = NetworkTableInstance.getDefault()
-                    .getStructTopic(POSE_LOGGING_PREFIX, Pose2d.struct)
+                    .getStructTopic(POSE_LOGGING_PREFIX+key, Pose2d.struct)
                     .publish();
             posePublishers.put(key, publisher);
         }
@@ -312,7 +317,7 @@ public class SwerveDriveSubsystem extends SubsystemBase {
 
         // we'll use a proxy command so it picks up the latest tuning
         // properties every time it runs
-        return Commands.deferredProxy(() -> new SwerveAlignToHeadingCommand(this, angle));
+        return Commands.deferredProxy(() -> new SwerveTargetHeadingCommand(this, angle));
     }
 
     /** @return a command to drive to a relative offset of the current position */
@@ -320,7 +325,7 @@ public class SwerveDriveSubsystem extends SubsystemBase {
 
         // we'll use a proxy command so it picks up the latest tuning
         // properties every time it runs
-        return Commands.deferredProxy(() -> new SwerveAlignPidCommand(this, offset));
+        return Commands.deferredProxy(() -> new SwerveTargetPoseOffsetCommand(this, offset));
     }
 
     // ========================================================

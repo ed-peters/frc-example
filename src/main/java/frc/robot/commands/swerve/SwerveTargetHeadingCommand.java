@@ -8,24 +8,24 @@ import frc.robot.util.PDController;
 import frc.robot.util.Util;
 import frc.robot.subsystems.swerve.SwerveDriveSubsystem;
 
-import static frc.robot.commands.swerve.SwerveAlignConfig.toHeadingMaxFeedback;
-import static frc.robot.commands.swerve.SwerveAlignConfig.toHeadingP;
-import static frc.robot.commands.swerve.SwerveAlignConfig.toHeadingD;
-import static frc.robot.commands.swerve.SwerveAlignConfig.toHeadingTolerance;
+import static frc.robot.commands.swerve.SwerveTargetingConfig.toHeadingMaxFeedback;
+import static frc.robot.commands.swerve.SwerveTargetingConfig.toHeadingP;
+import static frc.robot.commands.swerve.SwerveTargetingConfig.toHeadingD;
+import static frc.robot.commands.swerve.SwerveTargetingConfig.toHeadingTolerance;
 
 /**
- * Implements automatically aligning the robot to a target heading.
- * Demonstrates using PID control to automatically position the robot.
+ * This shows how to automatically align the swerve drive to a specific
+ * heading. This can be useful for facing an arena wall or an AprilTag.
  */
-public class SwerveAlignToHeadingCommand extends Command {
+public class SwerveTargetHeadingCommand extends Command {
 
     final SwerveDriveSubsystem drive;
     final PDController pid;
     final double targetDegrees;
-    double currentDegrees;
+    double currentHeading;
     double lastCorrection;
 
-    public SwerveAlignToHeadingCommand(SwerveDriveSubsystem drive, Rotation2d targetHeading) {
+    public SwerveTargetHeadingCommand(SwerveDriveSubsystem drive, Rotation2d targetHeading) {
 
         this.drive = drive;
         this.pid = new PDController(toHeadingP,
@@ -33,11 +33,12 @@ public class SwerveAlignToHeadingCommand extends Command {
                     toHeadingMaxFeedback,
                     toHeadingTolerance);
         this.targetDegrees = targetHeading.getDegrees();
-        this.currentDegrees = Double.NaN;
+        this.currentHeading = Double.NaN;
         this.lastCorrection = Double.NaN;
 
-        // configure the PID controller further
-        pid.setTolerance(toHeadingTolerance.getAsDouble());
+        // this tells the PID controller that there is a "wraparound"
+        // at (-180, 180) - it will do the math for us to make sure
+        // it doesn't try to correct by going "the long way around"
         pid.enableContinuousInput(-180.0, 180.0);
 
         addRequirements(drive);
@@ -54,25 +55,25 @@ public class SwerveAlignToHeadingCommand extends Command {
             builder.addDoubleProperty("LastError", pid::getError, null);
             builder.addDoubleProperty("LastCorrection", () -> lastCorrection, null);
             builder.addDoubleProperty("TargetHeading", () -> targetDegrees, null);
-            builder.addDoubleProperty("CurrentHeading", () -> currentDegrees, null);
+            builder.addDoubleProperty("CurrentHeading", () -> currentHeading, null);
             builder.addBooleanProperty("Running?", this::isScheduled, null);
         });
     }
 
     @Override
     public void initialize() {
+
+        // always reset the PID when you're doing closed loop
         pid.reset();
     }
 
     @Override
     public void execute() {
 
-        // calculate the current heading and feedback
-        currentDegrees = drive.getHeading().getDegrees();
-        lastCorrection = Util.applyClamp(
-                pid.calculate(currentDegrees, targetDegrees),
-                toHeadingMaxFeedback);
-
+        // calculate the current heading and correction speed, and
+        // apply it to rotate the drive
+        currentHeading = drive.getHeading().getDegrees();
+        lastCorrection = pid.calculate(currentHeading, targetDegrees);
         drive.drive("heading", new ChassisSpeeds(
                 0.0,
                 0.0,
@@ -81,21 +82,24 @@ public class SwerveAlignToHeadingCommand extends Command {
 
     @Override
     public boolean isFinished() {
+
+        // we're done when we're "close enough" to the target heading
         return pid.atSetpoint();
     }
 
     @Override
     public void end(boolean interrupted) {
 
-        // warn about this, in case this command had to be interrupted
-        // by a timeout because it never got to the target heading or
-        // something like that; that's a sign that it's badly tuned or
-        // may need a larger tolerance
+        // this command could run forever if we can't attain the target
+        // heading for some reason. rather than lose control of the
+        // robot during a match we will probably put it in a timeout.
+        // if it gets interrupted while it's running, we should know that
+        // so we can check tuning increase the tolerance or whatever
         if (!pid.atSetpoint()) {
             Util.log("[align-heading] !!! MISSED alignment to %.2f !!!", targetDegrees);
         }
 
-        currentDegrees = Double.NaN;
+        currentHeading = Double.NaN;
         lastCorrection = Double.NaN;
     }
 }

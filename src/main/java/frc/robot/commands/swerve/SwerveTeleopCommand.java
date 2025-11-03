@@ -14,7 +14,7 @@ import static frc.robot.commands.swerve.SwerveTeleopConfig.driftMaxFeedback;
 import static frc.robot.commands.swerve.SwerveTeleopConfig.driftP;
 
 /**
- * Implements teleop driving using the {@link SwerveTeleopSpeedSupplier}.
+ * This implements teleop driving using the {@link SwerveTeleopSpeedSupplier}.
  * Demonstrates the following features:
  * <ul>
  *
@@ -37,12 +37,9 @@ public class SwerveTeleopCommand extends Command {
     double lastCorrection;
 
     public SwerveTeleopCommand(SwerveDriveSubsystem drive, Supplier<ChassisSpeeds> speedSupplier) {
-
         this.drive = drive;
         this.speedSupplier = speedSupplier;
-
         addRequirements(drive);
-
         SmartDashboard.putData("SwerveTeleopCommand", builder -> {
             builder.addDoubleProperty("TargetHeading", () -> targetHeading, null);
             builder.addDoubleProperty("LastDrift", () -> lastDrift, null);
@@ -53,9 +50,10 @@ public class SwerveTeleopCommand extends Command {
 
     @Override
     public void initialize() {
-        System.out.println("[swerve] entering teleop");
         targetHeading = Double.NaN;
+        lastDrift = Double.NaN;
         lastCorrection = Double.NaN;
+        Util.log("[swerve] entering teleop");
     }
 
     @Override
@@ -71,16 +69,16 @@ public class SwerveTeleopCommand extends Command {
     }
 
     /**
-     * Implements translation from "field relative" speeds. This actually
-     * involves two translations - one based on the driver's POV and
-     * another based on how the robot is oriented.
+     * What we usually call "field relative" is actually "driver relative".
+     * Converting speeds from driver relative to robot relative involves
+     * two translations - one based on the driver's POV and another based on
+     * how the robot is oriented.
      */
     protected ChassisSpeeds convertFromFieldRelative(ChassisSpeeds incomingSpeeds) {
 
         // incoming speeds are interpreted like so:
         //   +X goes away from the driver
         //   +Y goes to the driver's left
-
         ChassisSpeeds fieldRelativeSpeeds;
 
         // if the driver is on the blue alliance, they are looking
@@ -108,9 +106,12 @@ public class SwerveTeleopCommand extends Command {
     }
 
     /**
-     * Driving straight with a swerve drive is actually a little tough - they
-     * will always tend to rotate a little bit. This implements a simple drift
-     * correction.
+     * Driving straight with a swerve drive can be a little tough - they
+     * will always tend to rotate a little bit because of the way the gears
+     * work. This implements a simple drift correction.</p>
+     *
+     * See <a href="https://www.chiefdelphi.com/t/whitepaper-swerve-drive-skew-and-second-order-kinematics/416964">this post on Chief Delphi</a>
+     * for a detailed explanation of why this happens.
      */
     protected ChassisSpeeds updateForDriftDetection(ChassisSpeeds speeds) {
 
@@ -143,5 +144,11 @@ public class SwerveTeleopCommand extends Command {
                     speeds.vyMetersPerSecond,
                     Math.toRadians(lastCorrection));
         }
+    }
+
+    public void end(boolean interrupted) {
+        targetHeading = Double.NaN;
+        lastDrift = Double.NaN;
+        lastCorrection = Double.NaN;
     }
 }

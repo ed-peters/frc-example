@@ -27,7 +27,7 @@ public class SwerveSimRobot extends TimedRobot {
         drive.setDefaultCommand(drive.teleopCommand(controller));
         controller.a().onTrue(drive.alignToWallCommand(Direction.NORTH));
         controller.b().onTrue(drive.alignToWallCommand(Direction.EAST));
-        controller.x().onTrue(drive.driveToOffsetCommand(new Translation2d(1.0, 2.0)));
+        controller.x().onTrue(drive.driveToOffsetCommand(new Translation2d(36.0, 72.0)));
     }
 
     @Override

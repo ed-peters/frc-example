@@ -6,9 +6,7 @@ import java.util.function.DoubleSupplier;
 import static frc.robot.util.Util.pref;
 
 /**
- * Configuration properties for the sample swerve subsystem. Stuff that
- * will (probably) never change can simply be Java constants, but stuff
- * that we might tweak/tune should be in {@link edu.wpi.first.wpilibj.Preferences}
+ * Configuration properties for swerve teleop.
  */
 public class SwerveTeleopConfig {
 
@@ -18,10 +16,10 @@ public class SwerveTeleopConfig {
     /** Exponent applied to joystick input in teleop */
     public static final DoubleSupplier exponent = pref("SwerveTeleop/Exponent", 2.0);
 
-    /** Top translate (X/Y) speed in teleop */
+    /** Top translate (X/Y) speed in teleop (in feet per second) */
     public static final DoubleSupplier maxTranslate = pref("SwerveTeleop/MaxTranslate", 10.0);
 
-    /** Top rotation speed in teleop */
+    /** Top rotation speed in teleop (in degrees per second) */
     public static final DoubleSupplier maxRotate = pref("SwerveTeleop/MaxRotate", 180.0);
 
     /** Multiplied by top speed in turbo mode */
@@ -36,14 +34,17 @@ public class SwerveTeleopConfig {
     /** Should we apply slew rate limiting in teleop? */
     public static final BooleanSupplier applySlew = pref("SwerveTeleop/ApplySlew?", false);
 
-    /** Slew rate limit () */
+    /**
+     * Slew rate limit (this is in "units per second) where units are in feet,
+     * so a rate of 4.0 means you will hit 4 feet per second after 1 second
+     */
     public static final DoubleSupplier slewRate = pref("SwerveTeleop/SlewRate", 4.0);
 
-    /** Driver relative mode */
-    public static final BooleanSupplier fieldRelative = pref("SwerveTeleop/FiedRelative?", true);
+    /** Toggle field relative mode */
+    public static final BooleanSupplier fieldRelative = pref("SwerveTeleop/FieldRelative?", true);
 
     /** Turn drift correction on/off */
-    public static BooleanSupplier driftCorrection = pref("SwerveTeleop/DriftCorrection?", true);
+    public static BooleanSupplier driftCorrection = pref("SwerveTeleop/DrfitCorrection?", true);
 
     /** Feedback constant for drift correction: P */
     public static DoubleSupplier driftP = pref("SwerveTeleop/DriftP", 2.0);

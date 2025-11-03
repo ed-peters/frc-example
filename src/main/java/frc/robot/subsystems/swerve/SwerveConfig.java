@@ -41,30 +41,4 @@ public class SwerveConfig {
     /** Enable/disable cosine compensation */
     public static BooleanSupplier cosineCompensation = pref("swerve_cosine", false);
 
-    // ==================================================================
-    // ALIGN TO HEADING
-    // ==================================================================
-
-    /** Feedback constant for aligning to a heading: P */
-    public static DoubleSupplier alignHeadingP = pref("swerve_drift_max_feedback", 10.0);
-
-    /** Feedback constant for aligning to a heading: D */
-    public static DoubleSupplier alignHeadingD = pref("swerve_drift_max_feedback", 10.0);
-
-    /** Tolerance in degrees for aligning to a heading */
-    public static DoubleSupplier alignHeadingTolerance = pref("swerve_drift_max_feedback", 10.0);
-
-    /** Maximum turn rate for aligning to a heading in degrees per second */
-    public static DoubleSupplier alignHeadingMax = pref("swerve_drift_max_feedback", 10.0);
-
-    // ==================================================================
-    // FOLLOW TRAJECTORY
-    // ==================================================================
-
-    public static DoubleSupplier trajectoryMinDistance = pref("swerve_trajectory_min_distance", 10.0);
-
-    public static DoubleSupplier trajectoryMaxVelocity = pref("swerve_trajectory_max_velocity", 10.0);
-
-    public static DoubleSupplier trajectoryAccelerationFactor = pref("swerve_trajectory_acceleration", 10.0);
-
 }
