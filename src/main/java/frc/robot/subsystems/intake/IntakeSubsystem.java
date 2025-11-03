@@ -4,6 +4,8 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.commands.intake.IntakeIdleCommand;
+import frc.robot.commands.intake.IntakeRpsCommand;
 import frc.robot.util.Motor;
 import frc.robot.util.PDController;
 import frc.robot.util.Util;
@@ -16,11 +18,7 @@ import static frc.robot.subsystems.intake.IntakeConfig.defaultBrakeEnabled;
 import static frc.robot.subsystems.intake.IntakeConfig.ejectSeconds;
 import static frc.robot.subsystems.intake.IntakeConfig.gearRatio;
 import static frc.robot.subsystems.intake.IntakeConfig.p;
-import static frc.robot.subsystems.intake.IntakeConfig.collectSpeed;
-import static frc.robot.subsystems.intake.IntakeConfig.ejectSpeed;
-import static frc.robot.subsystems.intake.IntakeConfig.feedSpeed;
 import static frc.robot.subsystems.intake.IntakeConfig.repositionSeconds;
-import static frc.robot.subsystems.intake.IntakeConfig.repositionSpeed;
 import static frc.robot.subsystems.intake.IntakeConfig.tolerance;
 import static frc.robot.subsystems.intake.IntakeConfig.v;
 import static frc.robot.subsystems.intake.IntakeConfig.wheelCircumferenceFeet;
@@ -49,15 +47,6 @@ import static frc.robot.subsystems.intake.IntakeConfig.wheelCircumferenceFeet;
  * is a spinning wheel (e.g. a shooter or indexer)
  */
 public class IntakeSubsystem extends SubsystemBase {
-
-    // we use presets to define certain special speeds that correspond
-    // to actions in the game (e.g. different phases of intake)
-    public enum Preset {
-        COLLECT,
-        REPOSITION,
-        FEED,
-        EJECT
-    }
 
     final Motor motor;
     final BooleanSupplier sensor;
@@ -104,108 +93,57 @@ public class IntakeSubsystem extends SubsystemBase {
         return getWheelVelocity() * wheelCircumferenceFeet;
     }
 
-    /** @return the speed associated with the specified preset */
-    public double getPresetSpeed(Preset preset) {
+    /** Runs the subsystem in closed loop mode */
+    public void closedLoop(String command, double rps) {
 
-        return switch (preset) {
+        // remember the current command and goal
+        currentCommand = command;
+        targetRps = rps;
 
-            case COLLECT -> collectSpeed.getAsDouble();
-            case FEED -> feedSpeed.getAsDouble();
-            case REPOSITION -> repositionSpeed.getAsDouble();
+        // calculate feedforward, feedback and total voltage
+        lastFeedforward = v.getAsDouble() * targetRps;
+        lastFeedback = pid.calculate(getWheelVelocity(), targetRps);
+        lastVolts = Util.clampVolts(lastFeedforward + lastFeedback);
 
-            // when we have a configuration property that specifies a "negative
-            // speed", we want to be careful that we always treat it as negative,
-            // even if someone forgot to add a minus sign
-            case EJECT -> -Math.abs(ejectSpeed.getAsDouble());
-        };
+        motor.applyVolts(lastVolts);
     }
 
-    /**
-     * @return a command that will "release" the wheel by applying
-     * zero voltage (this will probably be the default command for
-     * this subsystem)
-     */
+    /** Runs the system in open loop mode */
+    public void openLoop(String command, double volts) {
+
+        // remember the current command
+        currentCommand = command;
+
+        // in open loop mode, we have no target, feedback or feedforward
+        targetRps = Double.NaN;
+        lastFeedforward = Double.NaN;
+        lastFeedback = Double.NaN;
+        lastVolts = Util.clampVolts(volts);
+
+        motor.applyVolts(volts);
+    }
+
+    /** @return a command that will "release" the wheel */
     public Command idleCommand() {
-
-        return new Command() {
-
-            // before running this command we will reset the PID to
-            // clear the setpoint and error calculations
-            @Override
-            public void initialize() {
-                Util.log("[intake] idling");
-                pid.reset();
-            }
-
-            // to execute we just set the voltage to 0
-            @Override
-            public void execute() {
-                currentCommand = "idle";
-                targetRps = Double.NaN;
-                lastFeedforward = Double.NaN;
-                lastFeedback = Double.NaN;
-                lastVolts = 0.0;
-                motor.applyVolts(lastVolts);
-            }
-        };
+        return new IntakeIdleCommand(this);
     }
 
-    /**
-     * @return a command that will run the shooter in closed-loop mode
-     * at the supplied wheel velocity
-     */
-    public Command rpsCommand(String command, double rps) {
-
-        return new Command() {
-
-            // before running this command we will reset the PID with
-            // the most recent configuration values, and clear its
-            // calculated error from previous runs
-            @Override
-            public void initialize() {
-
-                // logging commands when they initialize is a good way to
-                // keep track of what the robot "thinks" it's doing for
-                // debugging
-                Util.log("[intake] running %s%n", command);
-                pid.reset();
-            }
-
-            // to execute we just calculate feedforward and feedback
-            // voltage
-            @Override
-            public void execute() {
-                currentCommand = command;
-                targetRps = rps;
-                lastFeedforward = v.getAsDouble() * targetRps;
-                lastFeedback = pid.calculate(getWheelVelocity(), targetRps);
-                lastVolts = Util.clampVolts(lastFeedforward + lastFeedback);
-                motor.applyVolts(lastVolts);
-            }
-        };
+    /** @return a command that to run at the supplied wheel speed */
+    public Command rpsCommand(String command, DoubleSupplier speedSupplier) {
+        return new IntakeRpsCommand(this, command, speedSupplier);
     }
 
-    /**
-     * @return a command that will run the intake in closed-loop mode
-     * at the supplied linear velocity
-     */
-    public Command fpsCommand(String command, double fps) {
+    /** @return a command that to run at the supplied linear velocity */
+    public Command fpsCommand(String command, DoubleSupplier fps) {
 
         // we can reuse commands with different inputs to create a
         // variety of different behaviors
-        return rpsCommand(command, fps / wheelCircumferenceFeet);
+        return rpsCommand(command, () -> fps.getAsDouble() / wheelCircumferenceFeet);
     }
 
-    /**
-     * @return a command to run the intake at the specified preset speed
-     */
-    public Command presetCommand(Preset preset) {
-
-        // note that this "captures" the configured preset speed when
-        // the command is created - if you bind this directly to a joystick
-        // button, it will ignore any later changes in configuration.
-        // see below for examples of using a proxy command to avoid this.
-        return fpsCommand(preset.name(), getPresetSpeed(preset));
+    /** @return a command to run the intake at the specified preset speed */
+    public Command presetCommand(IntakePreset preset) {
+        return fpsCommand(preset.name(), preset.getSpeed());
     }
 
     /**
@@ -214,13 +152,11 @@ public class IntakeSubsystem extends SubsystemBase {
      */
     public Command tuningCommand() {
 
-        // this allows setting velocity from the dashboard
-        DoubleSupplier pref = Util.pref("IntakeSubsystem/TuningVelocity", 0.0);
-
-        // when a command depends on a value that might change in between
-        // executions, we use a proxy to make sure we get the most recent
-        // value whenever it executes
-        return Commands.deferredProxy(() -> rpsCommand("tuning", pref.getAsDouble()));
+        // being able to set the tuning speed from the dashboard is hella
+        // useful during tuning
+        SmartDashboard.putNumber("IntakeSubsystem/TuningVelocity", 0.0);
+        return rpsCommand("tuning", () ->
+            SmartDashboard.getNumber("IntakeSubsystem/TuningVelocity", 0.0));
     }
 
     /**
@@ -229,10 +165,11 @@ public class IntakeSubsystem extends SubsystemBase {
      */
     public Command ejectCommand() {
 
-        // same principle as above - use proxy commands to make sure we
-        // get the most recent timeout values
+        // when a command depends on a value that might change in between
+        // executions, we use a proxy to make sure we get the most recent
+        // value whenever it executes
         return Commands.deferredProxy(() ->
-            presetCommand(Preset.EJECT).withTimeout(ejectSeconds.getAsDouble()));
+            presetCommand(IntakePreset.EJECT).withTimeout(ejectSeconds.getAsDouble()));
     }
 
     /**
@@ -249,10 +186,10 @@ public class IntakeSubsystem extends SubsystemBase {
         // and timing
         return Commands.deferredProxy(() -> {
 
-            Command collectUntilSensor = presetCommand(Preset.COLLECT)
+            Command collectUntilSensor = presetCommand(IntakePreset.COLLECT)
                     .until(sensor);
 
-            Command repositionUntilTimeout = presetCommand(Preset.REPOSITION)
+            Command repositionUntilTimeout = presetCommand(IntakePreset.REPOSITION)
                     .withTimeout(repositionSeconds.getAsDouble());
 
             return collectUntilSensor.andThen(repositionUntilTimeout);

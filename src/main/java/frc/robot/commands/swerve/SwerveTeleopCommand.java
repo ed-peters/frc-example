@@ -3,9 +3,12 @@ package frc.robot.commands.swerve;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.util.Util;
 import frc.robot.subsystems.swerve.SwerveDriveSubsystem;
 
+import java.util.function.BooleanSupplier;
+import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
 import static frc.robot.commands.swerve.SwerveTeleopConfig.fieldRelative;
@@ -150,5 +153,31 @@ public class SwerveTeleopCommand extends Command {
         targetHeading = Double.NaN;
         lastDrift = Double.NaN;
         lastCorrection = Double.NaN;
+    }
+
+    /**
+     * @return a teleop command for the supplied drive using the "standard"
+     * controls (left stick controls strafing, right stick controls
+     * turning, left trigger is sniper, right trigger is turbo)
+     */
+    public static SwerveTeleopCommand create(SwerveDriveSubsystem drive,
+                                             CommandXboxController controller) {
+
+        // pushing right or forward on the joystick results in negative values, so
+        // we invert them before using them
+        DoubleSupplier leftX = () -> -controller.getLeftX();
+        DoubleSupplier leftY = () -> -controller.getLeftY();
+        DoubleSupplier rightX = () -> -controller.getRightX();
+
+        // triggers controller sniper/turbo behavior
+        BooleanSupplier sniperTrigger = () -> controller.getLeftTriggerAxis() > 0.5;
+        BooleanSupplier turboTrigger = () -> controller.getRightTriggerAxis() > 0.5;
+
+        return new SwerveTeleopCommand(drive, new SwerveTeleopSpeedSupplier(
+                leftX,
+                leftY,
+                rightX,
+                turboTrigger,
+                sniperTrigger));
     }
 }

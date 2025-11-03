@@ -190,6 +190,11 @@ public class SwerveTeleopSpeedSupplier implements Supplier<ChassisSpeeds> {
         }
     }
 
+    /**
+     * This applies slew limiting, but only when we're moving. If the desired
+     * speed is 0, we will simply stop and reset the slew limit. This is to
+     * keep manual targeting accurate.
+     */
     private double slewLimit(double value, SlewRateLimiter limiter) {
         if (value == 0.0) {
             limiter.reset(0.0);

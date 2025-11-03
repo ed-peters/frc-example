@@ -24,12 +24,9 @@ import frc.robot.commands.swerve.SwerveTargetPoseOffsetCommand;
 import frc.robot.util.Util;
 import frc.robot.commands.swerve.SwerveTargetHeadingCommand;
 import frc.robot.commands.swerve.SwerveTeleopCommand;
-import frc.robot.commands.swerve.SwerveTeleopSpeedSupplier;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.BooleanSupplier;
-import java.util.function.DoubleSupplier;
 
 import static frc.robot.subsystems.swerve.SwerveConfig.kinematics;
 import static frc.robot.subsystems.swerve.SwerveConfig.maximumWheelSpeed;
@@ -276,32 +273,12 @@ public class SwerveDriveSubsystem extends SubsystemBase {
     }
 
     // ========================================================
-    // DRIVING COMMANDS
+    // COMMANDS
     // ========================================================
 
-    /**
-     * @return a teleop command for this drive using the "standard"
-     * controls (left stick controls strafing, right stick controls
-     * turning, left trigger is sniper, right trigger is turbo)
-     */
+    /** @return a teleop command for this drive and controller */
     public Command teleopCommand(CommandXboxController controller) {
-
-        // pushing right or forward on the joystick results in negative values, so
-        // we invert them before using them
-        DoubleSupplier leftX = () -> -controller.getLeftX();
-        DoubleSupplier leftY = () -> -controller.getLeftY();
-        DoubleSupplier rightX = () -> -controller.getRightX();
-
-        // triggers controller sniper/turbo behavior
-        BooleanSupplier sniperTrigger = () -> controller.getLeftTriggerAxis() > 0.5;
-        BooleanSupplier turboTrigger = () -> controller.getRightTriggerAxis() > 0.5;
-
-        return new SwerveTeleopCommand(this, new SwerveTeleopSpeedSupplier(
-                leftX,
-                leftY,
-                rightX,
-                turboTrigger,
-                sniperTrigger));
+        return SwerveTeleopCommand.create(this, controller);
     }
 
     /** @return a command to align the robot to an arena wall */
@@ -328,17 +305,16 @@ public class SwerveDriveSubsystem extends SubsystemBase {
         return Commands.deferredProxy(() -> new SwerveTargetPoseOffsetCommand(this, offset));
     }
 
-    // ========================================================
-    // POSE COMMANDS
-    // ========================================================
-
     /** @return a command to set the pose to 0 */
     public Command zeroPoseCommand() {
         return runOnce(() -> resetPose(Util.ZERO_POSE));
     }
 
-    /** @return a command to set the pose to the most recent vision pose */
-    public Command visionPoseCommand() {
+    /**
+     * @return a command to set the pose to the most recent vision pose (this
+     * is very useful on test fields)
+     */
+    public Command useVisionPoseCommand() {
         return runOnce(() -> {
             if (lastVisionPose == null) {
                 Util.log("[swerve] can't reset pose (no vision pose available)");

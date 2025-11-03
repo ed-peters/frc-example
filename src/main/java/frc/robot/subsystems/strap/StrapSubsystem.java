@@ -4,7 +4,6 @@ import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.util.Motor;
 import frc.robot.util.Util;
@@ -88,7 +87,7 @@ public class StrapSubsystem extends SubsystemBase {
      */
     public Command closeCommand() {
 
-        return Commands.deferredProxy(() -> {
+        return defer(() -> {
 
             Util.log("[strap] closing ...");
 
