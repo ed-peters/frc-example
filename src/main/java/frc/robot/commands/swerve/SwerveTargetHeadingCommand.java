@@ -8,6 +8,7 @@ import frc.robot.util.PDController;
 import frc.robot.util.Util;
 import frc.robot.subsystems.swerve.SwerveDriveSubsystem;
 
+import static frc.robot.commands.swerve.SwerveTargetingConfig.enableLogging;
 import static frc.robot.commands.swerve.SwerveTargetingConfig.toHeadingMaxFeedback;
 import static frc.robot.commands.swerve.SwerveTargetingConfig.toHeadingP;
 import static frc.robot.commands.swerve.SwerveTargetingConfig.toHeadingD;
@@ -44,22 +45,6 @@ public class SwerveTargetHeadingCommand extends Command {
         addRequirements(drive);
     }
 
-    /**
-     * In normal operation, there are probably going to be a bunch of
-     * instances of this command, so we won't clutter the dashboard with
-     * them all; instead, this will let you register them under different
-     * names e.g. for testing
-     */
-    public void addToDash(String name) {
-        SmartDashboard.putData(name, builder -> {
-            builder.addDoubleProperty("LastError", pid::getError, null);
-            builder.addDoubleProperty("LastCorrection", () -> lastCorrection, null);
-            builder.addDoubleProperty("TargetHeading", () -> targetDegrees, null);
-            builder.addDoubleProperty("CurrentHeading", () -> currentHeading, null);
-            builder.addBooleanProperty("Running?", this::isScheduled, null);
-        });
-    }
-
     @Override
     public void initialize() {
 
@@ -78,6 +63,18 @@ public class SwerveTargetHeadingCommand extends Command {
                 0.0,
                 0.0,
                 Math.toRadians(lastCorrection)));
+
+        // in normal operation, we're probably going to wind up with
+        // many instances of this command. instead of trying to register
+        // them all under different names, we'll just have whichever one
+        // is running publish the "latest" information for debugging
+        if (enableLogging) {
+            SmartDashboard.putNumber("SwerveTargetHeadingCommand/LastError", pid.getError());
+            SmartDashboard.putNumber("SwerveTargetHeadingCommand/LastCorrection", lastCorrection);
+            SmartDashboard.putNumber("SwerveTargetHeadingCommand/TargetHeading", targetDegrees);
+            SmartDashboard.putNumber("SwerveTargetHeadingCommand/CurrentHeading", currentHeading);
+            SmartDashboard.putBoolean("SwerveTargetHeadingCommand/Running?", true);
+        }
     }
 
     @Override
@@ -101,5 +98,9 @@ public class SwerveTargetHeadingCommand extends Command {
 
         currentHeading = Double.NaN;
         lastCorrection = Double.NaN;
+
+        if (enableLogging) {
+            SmartDashboard.putBoolean("SwerveTargetHeadingCommand/Running?", false);
+        }
     }
 }

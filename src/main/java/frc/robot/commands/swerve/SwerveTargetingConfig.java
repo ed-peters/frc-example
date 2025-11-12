@@ -11,6 +11,9 @@ import static frc.robot.util.Util.pref;
  */
 public class SwerveTargetingConfig {
 
+    /** Implements a "quiet mode" to prevent spamming the dashboard during competition */
+    public static final boolean enableLogging = false;
+
     // ==================================================================
     // ALIGN TO HEADING
     // ==================================================================

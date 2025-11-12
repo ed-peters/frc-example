@@ -10,6 +10,7 @@ import frc.robot.subsystems.swerve.SwerveDriveSubsystem;
 
 import java.util.function.Supplier;
 
+import static frc.robot.commands.swerve.SwerveTargetingConfig.enableLogging;
 import static frc.robot.commands.swerve.SwerveTargetingConfig.tagAreaD;
 import static frc.robot.commands.swerve.SwerveTargetingConfig.tagAreaP;
 import static frc.robot.commands.swerve.SwerveTargetingConfig.tagAreaTarget;
@@ -56,25 +57,6 @@ public class SwerveTargetAprilTagCommand extends Command {
         addRequirements(drive);
     }
 
-    /**
-     * In normal operation, there are probably going to be a bunch of
-     * instances of this command, so we won't clutter the dashboard with
-     * them all; instead, this will let you register them under different
-     * names e.g. for testing
-     */
-    public void addToDash(String name) {
-        SmartDashboard.putData(name, builder -> {
-            builder.addDoubleProperty("SpeedX", () -> lastSpeedX, null);
-            builder.addDoubleProperty("SpeedY", () -> lastSpeedY, null);
-            builder.addDoubleProperty("OffsetCurrent", () -> lastOffset, null);
-            builder.addDoubleProperty("OffsetError", pidOffset::getError, null);
-            builder.addDoubleProperty("AreaCurrent", () -> lastArea, null);
-            builder.addDoubleProperty("AreaOffset", pidArea::getError, null);
-            builder.addBooleanProperty("AtX?", pidOffset::atSetpoint, null);
-            builder.addBooleanProperty("AtY?", pidArea::atSetpoint, null);
-        });
-    }
-
     @Override
     public void initialize() {
 
@@ -87,6 +69,22 @@ public class SwerveTargetAprilTagCommand extends Command {
         pidArea.reset();
 
         Util.log("[align-tag] aligning to tag");
+
+        // in normal operation, we're probably going to wind up with
+        // many instances of this command. instead of trying to register
+        // them all under different names, we'll just have whichever one
+        // is running publish the "latest" information for debugging
+        if (enableLogging) {
+            SmartDashboard.putNumber("SwerveTargetAprilTagCommand/SpeedX", lastSpeedX);
+            SmartDashboard.putNumber("SwerveTargetAprilTagCommand/SpeedY", lastSpeedY);
+            SmartDashboard.putNumber("SwerveTargetAprilTagCommand/OffsetCurrent", lastOffset);
+            SmartDashboard.putNumber("SwerveTargetAprilTagCommand/OffsetError", pidOffset.getError());
+            SmartDashboard.putNumber("SwerveTargetAprilTagCommand/AreaCurrent", lastArea);
+            SmartDashboard.putNumber("SwerveTargetAprilTagCommand/AreaOffset", pidArea.getError());
+            SmartDashboard.putBoolean("SwerveTargetAprilTagCommand/AtX?", pidOffset.atSetpoint());
+            SmartDashboard.putBoolean("SwerveTargetAprilTagCommand/AtY?", pidArea.atSetpoint());
+            SmartDashboard.putBoolean("SwerveTargetAprilTagCommand/Running?", true);
+        }
     }
 
     @Override
@@ -168,5 +166,9 @@ public class SwerveTargetAprilTagCommand extends Command {
         lastOffset = Double.NaN;
         lastSpeedX = Double.NaN;
         lastSpeedY = Double.NaN;
+
+        if (enableLogging) {
+            SmartDashboard.putBoolean("SwerveTargetAprilTagCommand/Running?", false);
+        }
     }
 }

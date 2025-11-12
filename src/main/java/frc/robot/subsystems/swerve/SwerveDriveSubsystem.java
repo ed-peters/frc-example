@@ -41,7 +41,7 @@ public class SwerveDriveSubsystem extends SubsystemBase {
     static final Map<String, StructPublisher<Pose2d>> posePublishers = new HashMap<>();
 
     /** Implements a "quiet mode" to prevent spamming the dashboard during competition */
-    public static final boolean BE_QUIET = false;
+    public static final boolean ALL_THE_LOGS = true;
 
     public enum Direction {
         NORTH,
@@ -56,6 +56,7 @@ public class SwerveDriveSubsystem extends SubsystemBase {
     Pose2d lastVisionPose;
     Pose2d lastOdometryPose;
     Pose2d lastFusedPose;
+    double lastVisionTimestamp;
     ChassisSpeeds lastSpeeds;
     Rotation2d currentHeading;
     String currentCommand;
@@ -74,7 +75,7 @@ public class SwerveDriveSubsystem extends SubsystemBase {
                 chassis.getHeading(),
                 chassis.getModulePositions(),
                 Util.ZERO_POSE);
-        this.lastVisionPose = Util.ZERO_POSE;
+        this.lastVisionPose = Util.NAN_POSE;
         this.lastOdometryPose = Util.ZERO_POSE;
         this.lastFusedPose = Util.ZERO_POSE;
         this.lastSpeeds = Util.ZERO_SPEED;
@@ -85,10 +86,11 @@ public class SwerveDriveSubsystem extends SubsystemBase {
             builder.addDoubleProperty("Speed/X", () -> lastSpeeds.vxMetersPerSecond, null);
             builder.addDoubleProperty("Speed/Y", () -> lastSpeeds.vyMetersPerSecond, null);
             builder.addDoubleProperty("Speed/Omega", () -> Math.toDegrees(lastSpeeds.omegaRadiansPerSecond), null);
-            if (!BE_QUIET) {
+            if (ALL_THE_LOGS) {
                 builder.addDoubleProperty("Poses/Vision/X", () -> lastVisionPose.getX(), null);
                 builder.addDoubleProperty("Poses/Vision/Y", () -> lastVisionPose.getY(), null);
                 builder.addDoubleProperty("Poses/Vision/Omega", () -> lastVisionPose.getRotation().getDegrees(), null);
+                builder.addDoubleProperty("Poses/Vision/Timestamp", () -> lastVisionTimestamp, null);
                 builder.addDoubleProperty("Poses/Fused/X", () -> lastFusedPose.getX(), null);
                 builder.addDoubleProperty("Poses/Fused/Y", () -> lastFusedPose.getY(), null);
                 builder.addDoubleProperty("Poses/Fused/Omega", () -> lastFusedPose.getRotation().getDegrees(), null);
@@ -117,7 +119,11 @@ public class SwerveDriveSubsystem extends SubsystemBase {
         return odometry.getPoseMeters();
     }
 
-    /** @return the most recent vision-based estimate of the pose of the robot */
+    /**
+     * @return the most recent vision-based estimate of the pose of the robot
+     * (this will never be null, but might be all NaNs if there is no latest
+     * pose)
+     */
     public Pose2d getVisionPose() {
         return lastVisionPose;
     }
@@ -133,9 +139,15 @@ public class SwerveDriveSubsystem extends SubsystemBase {
      * seconds since the robot started up).
      */
     public void addVisionPose(Pose2d pose, Matrix<N3,N1> stdDevs, double timestamp) {
-        estimator.setVisionMeasurementStdDevs(stdDevs);
-        estimator.addVisionMeasurement(pose, timestamp);
-        lastVisionPose = pose;
+        if (pose != null) {
+            estimator.setVisionMeasurementStdDevs(stdDevs);
+            estimator.addVisionMeasurement(pose, timestamp);
+            lastVisionPose = pose;
+            lastVisionTimestamp = timestamp;
+        } else {
+            lastVisionPose = Util.NAN_POSE;
+            lastVisionTimestamp = Double.NaN;
+        }
     }
 
     /**
@@ -176,10 +188,10 @@ public class SwerveDriveSubsystem extends SubsystemBase {
      */
     public void resetWithVisionPose() {
         Pose2d pose = getVisionPose();
-        if (pose != null) {
-            System.out.println("[swerve] refusing to reset pose (no available vision pose)");
+        if (pose == null || pose == Util.NAN_POSE) {
+            Util.log("[swerve] refusing to reset pose from vision (no available pose)");
         } else {
-            resetPose(getVisionPose());
+            resetPose(pose);
         }
     }
 

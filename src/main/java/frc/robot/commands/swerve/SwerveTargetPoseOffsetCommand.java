@@ -1,5 +1,6 @@
 package frc.robot.commands.swerve;
 
+import static frc.robot.commands.swerve.SwerveTargetingConfig.enableLogging;
 import static frc.robot.commands.swerve.SwerveTargetingConfig.toPoseAcceleration;
 import static frc.robot.commands.swerve.SwerveTargetingConfig.toPoseD;
 import static frc.robot.commands.swerve.SwerveTargetingConfig.toPoseMaxFeedback;
@@ -81,24 +82,6 @@ public class SwerveTargetPoseOffsetCommand extends Command {
         addRequirements(drive);
     }
 
-    /**
-     * In normal operation, there are probably going to be a bunch of
-     * instances of this command, so we won't clutter the dashboard with
-     * them all; instead, this will let you register them under different
-     * names e.g. for testing
-     */
-    public void addToDash(String name) {
-        SmartDashboard.putData(name, builder -> {
-            builder.addDoubleProperty("Distance", () -> distance, null);
-            builder.addDoubleProperty("Angle", angle::getDegrees, null);
-            builder.addDoubleProperty("SpeedX", () -> nextSpeedX, null);
-            builder.addDoubleProperty("SpeedY", () -> nextSpeedY, null);
-            builder.addDoubleProperty("ErrorX", pidX::getError, null);
-            builder.addDoubleProperty("ErrorY", pidY::getError, null);
-            builder.addBooleanProperty("Running?", this::isScheduled, null);
-        });
-    }
-
     @Override
     public void initialize() {
 
@@ -147,6 +130,20 @@ public class SwerveTargetPoseOffsetCommand extends Command {
         // publish the "next" and final poses for debugging
         drive.publishPose("AlignOffsetNext", new Pose2d(nextX, nextY, startPose.getRotation()));
         drive.publishPose("AlignOffsetFinal", finalPose);
+
+        // in normal operation, we're probably going to wind up with
+        // many instances of this command. instead of trying to register
+        // them all under different names, we'll just have whichever one
+        // is running publish the "latest" information for debugging
+        if (enableLogging) {
+            SmartDashboard.putNumber("SwerveTargetPoseOffsetCommand/Distance", distance);
+            SmartDashboard.putNumber("SwerveTargetPoseOffsetCommand/Angle", angle.getDegrees());
+            SmartDashboard.putNumber("SwerveTargetPoseOffsetCommand/SpeedX", nextSpeedX);
+            SmartDashboard.putNumber("SwerveTargetPoseOffsetCommand/SpeedY", nextSpeedY);
+            SmartDashboard.putNumber("SwerveTargetPoseOffsetCommand/ErrorX", pidX.getError());
+            SmartDashboard.putNumber("SwerveTargetPoseOffsetCommand/ErrorY", pidY.getError());
+            SmartDashboard.putBoolean("SwerveTargetPoseOffsetCommand/Running?", true);
+        }
     }
 
     @Override
@@ -183,5 +180,9 @@ public class SwerveTargetPoseOffsetCommand extends Command {
         nextY = Double.NaN;
 
         timer.stop();
+
+        if (enableLogging) {
+            SmartDashboard.putBoolean("SwerveTargetPoseOffsetCommand/Running?", false);
+        }
     }
 }
