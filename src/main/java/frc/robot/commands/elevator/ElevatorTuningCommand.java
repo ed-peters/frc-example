@@ -21,25 +21,25 @@ import static frc.robot.subsystems.elevator.ElevatorConfig.minHeight;
  *     with larger and larger values of G until the elevator just
  *     stays still where it starts (velocity should be ~0.0). If the
  *     elevator starts rising on its own, G is too high. You
- *     should get G dialed in to 2-3 digits of accuracy.</li>
+ *     should get G dialed in to 2-3 digits of accuracy. For a starting
+ *     value, try 1.0.</li>
  *
  *     <li>Now that you have G, set the tuning velocity to
  *     something over 0 (say, 6 inches per second). Run this command
  *     repeatedly, increasing V until the elevator achieves the target
  *     velocity. If the elevator is running too fast, V is too high.
  *     You should be able to get it accurate to less than 1 inch per
- *     second</li>
+ *     second. For a starting value, try 0.1.</li>
  *
- *     <li>Now that you have G and V, increase P to somewhere in the
- *     low single digits. This should remove any remaining position
- *     inaccuracy and you should be very closely tracking the
- *     target position.</li>
+ *     <li>Now that you have G and V, increase P. This should remove
+ *     any remaining position inaccuracy and you should be very closely
+ *     tracking the target position. For a starting value, try 1.0.</li>
  *
  * </ul>
  *
- * See the <a href="https://docs.wpilib.org/en/stable/docs/software/advanced-controls/introduction/tuning-elevator.html">WPILib docs</a>
- * for another way to explain this. Note that we're ignoring the A
- * parameter for feedforward.
+ * <p>See the <a href="https://docs.wpilib.org/en/stable/docs/software/advanced-controls/introduction/tuning-elevator.html">WPILib docs</a>
+ * for another way to explain this (note that we're ignoring the A
+ * parameter for feedforward).</p>
  */
 public class ElevatorTuningCommand extends Command {
 

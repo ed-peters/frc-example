@@ -96,19 +96,25 @@ public class SwerveTargetAprilTagCommand extends Command {
 
         // if we lose sight of the tag, we can't really do anything
         // and we have to quit
-        if (target == null || target.id() < 0) {
-            Util.log("[align-tag] TAG DROPPED OUT OF VIEW !!!");
+        if (!AprilTarget.isValidTarget(target)) {
+            Util.log("[align-tag] NO TAG IN VIEW !!!");
             running = false;
             return;
         }
 
-        // the limelight reports TX as positive when the tag is offset to the
-        // left. to fix this, we want to move in the +X direction, which is
-        // also positive. so we will negate the offset for our feedback.
         lastSpeedX = 0.0;
         lastSpeedY = 0.0;
-        lastOffset = -target.offset();
+
+        // area is how big the target is in the camera frame; bigger means
+        // we're closer to the target (and thus would want to move in the -X
+        // direction.
         lastArea = target.area();
+
+        // the limelight reports TX as positive when the tag is offset to the
+        // left. if this was the case, we would want to move in the +X
+        // direction, which is also positive. so we will negate the offset
+        // for our feedback.
+        lastOffset = -target.offset();
 
         // calculate X speed if we're not done centering the tag
         if (!achievedX) {

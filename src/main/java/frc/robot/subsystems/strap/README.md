@@ -7,3 +7,5 @@ But you probably don't want to wait until the speed is exactly 0 - this may wind
 But then you have a new problem - motors don't start moving instantaneously. So you will be a little slow at the beginning of the command. The solution is "if we've been applying power for a little while, and it's moving really slow, stop it".
 
 See the implementation for more comments, and notes about using the WPILib `Debouncer`.
+
+This kind of "open loop" subsystem could also be used as the basis for a simple user-controlled climber (like we've had in 2025, 2024, 2203 and further back).

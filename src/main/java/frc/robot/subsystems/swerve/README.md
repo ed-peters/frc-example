@@ -8,4 +8,4 @@ This is a subsystem for a swerve drive. A few learnings that are embedded here .
 
 **Simulation is hella useful**. It's very useful to be able to run in the simulation to test command logic. This is much faster than waiting for the robot to be available and going through continuous deploy-test-fix cycles. The `SwerveChassisSim` does this for the drive.
 
-**Rotating around objects is easy**. We've never actually used this but it's included here just because it's pretty easy to implement. See `SwerveDriveSubsystem::rotateAround`.
+**Rotating around objects is surprisingly easy**. We've never actually used this but it's included here just because it's pretty easy to implement. See `SwerveDriveSubsystem::rotateAround`.

@@ -49,7 +49,7 @@ public class SwerveTargetingConfig {
     public static DoubleSupplier toPoseD = pref("AlignPose/D", 0.0);
     public static DoubleSupplier toPoseMaxFeedback = pref("AlignPose/MaxFeedback", 10.0);
     public static DoubleSupplier toPoseMaxVelocity = pref("AlignPose/MaxVelocity", 48.0);
-    public static DoubleSupplier toPoseTolerance = pref("AlignPose/Tolerance", 0.1);
+    public static DoubleSupplier toPoseTolerance = pref("AlignPose/Tolerance", 4);
     public static DoubleSupplier toPoseAcceleration = pref("AlignPose/Acceleration", 2.0);
 
 }

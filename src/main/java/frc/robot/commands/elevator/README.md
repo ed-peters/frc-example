@@ -10,3 +10,5 @@ A few learnings that are embedded here ...
 **Tuning is pretty easy**. We got very accurate using only P, D, G and V constants, and doing a slightly abbreviated version of the recommended tuning approach in WPILib docs. See the `ElevatorTuningCommand` for more information.
 
 **D can be important**. We had an issue with our elevator slightly overshooting its target. D helps you come in for a "smooth landing". See `ElevatorTrapezoidCommand` for some comments.
+
+**Arms are really similar**. This is true for the subsystem (see the README for `ElevatorSubsystem`), but even more so for the commands - they are basically identical. Just like for the subsystem, though, it's probably worth having separate versions of the commands for the arm.

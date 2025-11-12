@@ -21,9 +21,10 @@ import static frc.robot.subsystems.elevator.ElevatorConfig.maxVelocity;
  * This command won't work until you've properly tuned G, V and P. See
  * the comments on {@link ElevatorTuningCommand} for more about that.</p>
  *
- * If you are running this command and the elevator seems to overshoot
- * its target position at the end of the motion, consider adding a small
- * value of D (like 0.1) to compensate for that.</p>
+ * In 2025 we tried using only P for the elevator. It worked OK, but we
+ * would overshoot our target position a bit. If you experience this,
+ * consider adding a small value of D (maybe starting at 0.1) to compensate
+ * for that.</p>
  *
  * See the <a href="https://docs.wpilib.org/en/stable/docs/software/advanced-controls/introduction/introduction-to-pid.html#response-types">WPILib docs</a>
  * for some notes on what properly tuned (or "damped") motion looks like.</p>

@@ -161,13 +161,18 @@ public class SwerveTargetPoseOffsetCommand extends Command {
     @Override
     public void end(boolean interrupted) {
 
-        // if tuning isn't correct we may not reach the target height (we
+        // if tuning isn't correct we may not reach the target position (we
         // might overshoot or undershoot). if you see this warning in the
-        // logs a lot, you should probably redo your tuning.
+        // logs a lot, you should probably redo your tuning
         double distanceToTarget = drive
                 .getFusedPose()
                 .getTranslation()
                 .getDistance(finalPose.getTranslation());
+
+        // wpilib calculates distance in meters so we convert to inches
+        // for comparing with the threshold
+        distanceToTarget = Units.inchesToMeters(distanceToTarget);
+
         if (distanceToTarget > toPoseTolerance.getAsDouble()) {
             Util.log("[swerve-pose] !!! MISSED goal %s by %.2f !!!", finalPose, distanceToTarget);
         }

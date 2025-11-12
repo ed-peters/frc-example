@@ -7,6 +7,10 @@ import edu.wpi.first.math.geometry.Pose2d;
  */
 public record AprilTarget(int id, Pose2d pose, double offset, double area) {
 
-    public static final AprilTarget NO_TARGET = new AprilTarget(-1, null, Double.NaN, Double.NaN);
-
+    /**
+     * @return does the supplied tag represent a valid target?
+     */
+    public static boolean isValidTarget(AprilTarget target) {
+        return target != null && target.id > 0;
+    }
 }

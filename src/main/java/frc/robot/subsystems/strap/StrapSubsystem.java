@@ -11,6 +11,7 @@ import frc.robot.util.Util;
 import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 
+import static frc.robot.subsystems.strap.StrapConfig.closeStallSeconds;
 import static frc.robot.subsystems.strap.StrapConfig.closeStallVelocity;
 import static frc.robot.subsystems.strap.StrapConfig.closeVolts;
 import static frc.robot.subsystems.strap.StrapConfig.defaultBrakeEnabled;
@@ -97,12 +98,13 @@ public class StrapSubsystem extends SubsystemBase {
             // a debouncer is a filter that only changes state if the
             // underlying signal sustains a change for a period of time
             Debouncer debouncer = new Debouncer(
-                    closeStallVelocity.getAsDouble(),
+                    closeStallSeconds.getAsDouble(),
                     DebounceType.kRising);
 
             // this will check whether we're below the stall velocity and
             // supply that to the debouncer, which will only return "true"
-            // if it's been happening consistently for a period of time
+            // if it's been happening consistently for the configured period
+            // of time
             BooleanSupplier isStalled = () -> {
                 boolean belowVelocity = motor.getVelocity() < closeStallVelocity.getAsDouble();
                 return debouncer.calculate(belowVelocity);
