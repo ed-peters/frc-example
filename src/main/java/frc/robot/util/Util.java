@@ -9,10 +9,14 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.trajectory.TrapezoidProfile.State;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.networktables.StructPublisher;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Preferences;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
@@ -80,8 +84,31 @@ public class Util {
     }
 
     // ===========================================================
-    // DRIVING STUFF
+    // DRIVING & FIELD STUFF
     // ===========================================================
+
+    // holds the field layout once we've loaded it (which happens the
+    // first time we request tag info)
+    static AprilTagFieldLayout layout = null;
+
+    /** @return information about the supplied AprilTag */
+    public static Pose2d getAprilTagPose(int id) {
+        if (layout == null) {
+
+            // in 2025 there was an issue where the field measurements were
+            // different depending on which vendor made the field; if this
+            // comes up again you might need to make a configurable property
+            // to indicate which field layout to use
+            layout = AprilTagFieldLayout.loadField(AprilTagFields.kDefaultField);
+        }
+        Optional<Pose3d> pose = layout.getTagPose(id);
+        return pose.map(Pose3d::toPose2d).orElse(null);
+    }
+
+    /** @return true if the driver's station says we're blue alliance */
+    public static boolean isBlueAlliance() {
+        return DriverStation.getAlliance().orElse(Alliance.Red) == Alliance.Blue;
+    }
 
     /**
      * @return true if the supplied speeds include an XY translation
@@ -99,24 +126,30 @@ public class Util {
         return Math.abs(speeds.omegaRadiansPerSecond) > 0.0;
     }
 
-    // ===========================================================
-    // FIELD STUFF
-    // ===========================================================
+    /** Prefix & loggers for logging pose structs */
+    public static final String POSE_LOGGING_PREFIX = "SmartDashboard/SwerveDriveSubsystem/Structs/";
 
-    static AprilTagFieldLayout layout = null;
+    static final Map<String, StructPublisher<Pose2d>> posePublishers = new HashMap<>();
 
-    /** @return information about the supplied AprilTag */
-    public static Pose2d getAprilTagPose(int id) {
-        if (layout == null) {
-            layout = AprilTagFieldLayout.loadField(AprilTagFields.kDefaultField);
+    /**
+     * Publish a pose to the dashboard (automatically adds the "SmartDashboard"
+     * prefix so it will show up under that topic in the dashboard)
+     */
+    public static void publishPose(String key, Pose2d val) {
+
+        // see if a publisher already exists
+        StructPublisher<Pose2d> publisher = posePublishers.get(key);
+
+        // create it if it doesn't (we add the SmartDashboard prefix so
+        // it shows up next to other values we publish)
+        if (publisher == null) {
+            publisher = NetworkTableInstance.getDefault()
+                    .getStructTopic(POSE_LOGGING_PREFIX+key, Pose2d.struct)
+                    .publish();
+            posePublishers.put(key, publisher);
         }
-        Optional<Pose3d> pose = layout.getTagPose(id);
-        return pose.map(Pose3d::toPose2d).orElse(null);
-    }
 
-    /** @return true if the driver's station says we're blue alliance */
-    public static boolean isBlueAlliance() {
-        return DriverStation.getAlliance().orElse(Alliance.Red) == Alliance.Blue;
+        publisher.set(val);
     }
 
     // ===========================================================

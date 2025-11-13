@@ -13,20 +13,15 @@ import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.util.Units;
-import edu.wpi.first.networktables.NetworkTableInstance;
-import edu.wpi.first.networktables.StructPublisher;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
-import frc.robot.commands.swerve.SwerveTargetPoseOffsetCommand;
+import frc.robot.commands.swerve.SwerveTranslateCommand;
 import frc.robot.util.Util;
-import frc.robot.commands.swerve.SwerveTargetHeadingCommand;
+import frc.robot.commands.swerve.SwerveRotateCommand;
 import frc.robot.commands.swerve.SwerveTeleopCommand;
-
-import java.util.HashMap;
-import java.util.Map;
 
 import static frc.robot.subsystems.swerve.SwerveConfig.kinematics;
 import static frc.robot.subsystems.swerve.SwerveConfig.maximumWheelSpeed;
@@ -35,10 +30,6 @@ import static frc.robot.subsystems.swerve.SwerveConfig.maximumWheelSpeed;
  * Interface for a swerve drive
  */
 public class SwerveDriveSubsystem extends SubsystemBase {
-
-    /** Prefix & loggers for logging pose structs */
-    public static final String POSE_LOGGING_PREFIX = "SmartDashboard/SwerveDriveSubsystem/Structs/";
-    static final Map<String, StructPublisher<Pose2d>> posePublishers = new HashMap<>();
 
     /** Implements a "quiet mode" to prevent spamming the dashboard during competition */
     public static final boolean ALL_THE_LOGS = true;
@@ -258,30 +249,9 @@ public class SwerveDriveSubsystem extends SubsystemBase {
         lastOdometryPose = getOdometryPose();
 
         // publish them as structs so we can see them in advantage scope
-        publishPose("FusedPose", lastFusedPose);
-        publishPose("OdometryPose", lastOdometryPose);
-        publishPose("VisionPose", lastVisionPose);
-    }
-
-    /**
-     * Publish a pose to the dashboard (automatically adds the "SmartDashboard"
-     * prefix so it will show up under that topic in the dashboard)
-     */
-    public void publishPose(String key, Pose2d val) {
-
-        // see if a publisher already exists
-        StructPublisher<Pose2d> publisher = posePublishers.get(key);
-
-        // create it if it doesn't (we add the SmartDashboard prefix so
-        // it shows up next to other values we publish)
-        if (publisher == null) {
-            publisher = NetworkTableInstance.getDefault()
-                    .getStructTopic(POSE_LOGGING_PREFIX+key, Pose2d.struct)
-                    .publish();
-            posePublishers.put(key, publisher);
-        }
-
-        publisher.set(val);
+        Util.publishPose("FusedPose", lastFusedPose);
+        Util.publishPose("OdometryPose", lastOdometryPose);
+        Util.publishPose("VisionPose", lastVisionPose);
     }
 
     // ========================================================
@@ -306,7 +276,7 @@ public class SwerveDriveSubsystem extends SubsystemBase {
 
         // we'll use a proxy command so it picks up the latest tuning
         // properties every time it runs
-        return Commands.deferredProxy(() -> new SwerveTargetHeadingCommand(this, angle));
+        return Commands.deferredProxy(() -> new SwerveRotateCommand(this, angle));
     }
 
     /** @return a command to drive to a relative offset of the current position */
@@ -314,7 +284,7 @@ public class SwerveDriveSubsystem extends SubsystemBase {
 
         // we'll use a proxy command so it picks up the latest tuning
         // properties every time it runs
-        return Commands.deferredProxy(() -> new SwerveTargetPoseOffsetCommand(this, offset));
+        return Commands.deferredProxy(() -> new SwerveTranslateCommand(this, offset));
     }
 
     /** @return a command to set the pose to 0 */

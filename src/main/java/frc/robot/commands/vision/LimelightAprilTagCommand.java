@@ -1,43 +1,46 @@
-package frc.robot.commands.swerve;
+package frc.robot.commands.vision;
 
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
-import frc.robot.util.AprilTarget;
+import frc.robot.subsystems.swerve.SwerveDriveSubsystem;
+import frc.robot.subsystems.vision.LimelightEstimator;
+import frc.robot.subsystems.vision.LimelightTarget;
 import frc.robot.util.PDController;
 import frc.robot.util.Util;
-import frc.robot.subsystems.swerve.SwerveDriveSubsystem;
 
-import java.util.function.Supplier;
-
-import static frc.robot.commands.swerve.SwerveTargetingConfig.enableLogging;
-import static frc.robot.commands.swerve.SwerveTargetingConfig.tagAreaD;
-import static frc.robot.commands.swerve.SwerveTargetingConfig.tagAreaP;
-import static frc.robot.commands.swerve.SwerveTargetingConfig.tagAreaTarget;
-import static frc.robot.commands.swerve.SwerveTargetingConfig.tagAreaTolerance;
-import static frc.robot.commands.swerve.SwerveTargetingConfig.tagMaxFeedback;
-import static frc.robot.commands.swerve.SwerveTargetingConfig.tagOffsetD;
-import static frc.robot.commands.swerve.SwerveTargetingConfig.tagOffsetP;
-import static frc.robot.commands.swerve.SwerveTargetingConfig.tagOffsetTarget;
-import static frc.robot.commands.swerve.SwerveTargetingConfig.tagOffsetTolerance;
+import static frc.robot.commands.vision.VisionConfig.enableLogging;
+import static frc.robot.commands.vision.VisionConfig.limelightAreaD;
+import static frc.robot.commands.vision.VisionConfig.limelightAreaP;
+import static frc.robot.commands.vision.VisionConfig.limelightAreaTarget;
+import static frc.robot.commands.vision.VisionConfig.limelightAreaTolerance;
+import static frc.robot.commands.vision.VisionConfig.limelightMaxFeedback;
+import static frc.robot.commands.vision.VisionConfig.limelightOffsetD;
+import static frc.robot.commands.vision.VisionConfig.limelightOffsetP;
+import static frc.robot.commands.vision.VisionConfig.limelightOffsetTarget;
+import static frc.robot.commands.vision.VisionConfig.limelightOffsetTolerance;
 
 /**
  * This aligns the robot to an AprilTag based on:
  * <ul>
  *
  *     <li>The offset of the tag to the center of the camera frame.
- *     This is written based on the Limelight TX value, which is
- *     is >0 if the tag is to the right in the frame.</li>
+ *     This is based on the Limelight TX value, which is is >0 if the
+ *     tag is to the right in the frame.</li>
  *
  *     <li>The area of the tag in the camera frame. For the Limelight,
  *     this is TA, and gets bigger the closer we are to the tag.</li>
  *
  * </ul>
+ *
+ * By tuning this command you will be able to arrive at a reliable
+ * position in front of an a tag, which is an important step in
+ * targeting.</p>
  */
-public class SwerveTargetAprilTagCommand extends Command {
+public class LimelightAprilTagCommand extends Command {
 
     final SwerveDriveSubsystem drive;
-    final Supplier<AprilTarget> targetSupplier;
+    final LimelightEstimator limelight;
     final PDController pidArea;
     final PDController pidOffset;
     double lastOffset;
@@ -48,12 +51,12 @@ public class SwerveTargetAprilTagCommand extends Command {
     boolean achievedY;
     boolean running;
 
-    public SwerveTargetAprilTagCommand(SwerveDriveSubsystem drive,
-                                       Supplier<AprilTarget> targetSupplier) {
+    public LimelightAprilTagCommand(SwerveDriveSubsystem drive,
+                                    LimelightEstimator limelight) {
         this.drive = drive;
-        this.targetSupplier = targetSupplier;
-        this.pidArea = new PDController(tagAreaP, tagAreaD, tagMaxFeedback, tagAreaTolerance);
-        this.pidOffset = new PDController(tagOffsetP, tagOffsetD, tagMaxFeedback, tagOffsetTolerance);
+        this.limelight = limelight;
+        this.pidArea = new PDController(limelightAreaP, limelightAreaD, limelightMaxFeedback, limelightAreaTolerance);
+        this.pidOffset = new PDController(limelightOffsetP, limelightOffsetD, limelightMaxFeedback, limelightOffsetTolerance);
         addRequirements(drive);
     }
 
@@ -68,34 +71,18 @@ public class SwerveTargetAprilTagCommand extends Command {
         pidOffset.reset();
         pidArea.reset();
 
-        Util.log("[align-tag] aligning to tag");
-
-        // in normal operation, we're probably going to wind up with
-        // many instances of this command. instead of trying to register
-        // them all under different names, we'll just have whichever one
-        // is running publish the "latest" information for debugging
-        if (enableLogging) {
-            SmartDashboard.putNumber("SwerveTargetAprilTagCommand/SpeedX", lastSpeedX);
-            SmartDashboard.putNumber("SwerveTargetAprilTagCommand/SpeedY", lastSpeedY);
-            SmartDashboard.putNumber("SwerveTargetAprilTagCommand/OffsetCurrent", lastOffset);
-            SmartDashboard.putNumber("SwerveTargetAprilTagCommand/OffsetError", pidOffset.getError());
-            SmartDashboard.putNumber("SwerveTargetAprilTagCommand/AreaCurrent", lastArea);
-            SmartDashboard.putNumber("SwerveTargetAprilTagCommand/AreaOffset", pidArea.getError());
-            SmartDashboard.putBoolean("SwerveTargetAprilTagCommand/AtX?", pidOffset.atSetpoint());
-            SmartDashboard.putBoolean("SwerveTargetAprilTagCommand/AtY?", pidArea.atSetpoint());
-            SmartDashboard.putBoolean("SwerveTargetAprilTagCommand/Running?", true);
-        }
+        Util.log("[ll-tag] aligning to tag");
     }
 
     @Override
     public void execute() {
 
-        AprilTarget target = targetSupplier.get();
+        LimelightTarget target = limelight.getCurrentTarget();
 
         // if we lose sight of the tag, we can't really do anything
         // and we have to quit
-        if (!AprilTarget.isValidTarget(target)) {
-            Util.log("[align-tag] NO TAG IN VIEW !!!");
+        if (target == null || target.tag() < 1) {
+            Util.log("[ll-tag] NO TAG IN VIEW !!!");
             running = false;
             return;
         }
@@ -116,23 +103,39 @@ public class SwerveTargetAprilTagCommand extends Command {
 
         // calculate X speed if we're not done centering the tag
         if (!achievedX) {
-            lastSpeedX = pidOffset.calculate(lastOffset, tagOffsetTarget.getAsDouble());
+            lastSpeedX = pidOffset.calculate(lastOffset, limelightOffsetTarget.getAsDouble());
             achievedX = pidOffset.atSetpoint();
         }
 
         // calculate the Y speed if the tag isn't close enough
         if (!achievedY) {
-            lastSpeedY = pidArea.calculate(lastArea, tagAreaTarget.getAsDouble());
+            lastSpeedY = pidArea.calculate(lastArea, limelightAreaTarget.getAsDouble());
             achievedY = pidArea.atSetpoint();
         }
 
         // we will run until we've hit both objectives
         running = !(achievedX && achievedY);
 
-        drive.drive("align-tag", new ChassisSpeeds(
+        drive.drive("ll-tag", new ChassisSpeeds(
                 lastSpeedX,
                 lastSpeedY,
                 0.0));
+
+        // in normal operation, we're probably going to wind up with
+        // many instances of this command. instead of trying to register
+        // them all under different names, we'll just have whichever one
+        // is running publish the "latest" information for debugging
+        if (enableLogging) {
+            SmartDashboard.putNumber("LimelightAprilTagCommand/SpeedX", lastSpeedX);
+            SmartDashboard.putNumber("LimelightAprilTagCommand/SpeedY", lastSpeedY);
+            SmartDashboard.putNumber("LimelightAprilTagCommand/OffsetCurrent", lastOffset);
+            SmartDashboard.putNumber("LimelightAprilTagCommand/OffsetError", pidOffset.getError());
+            SmartDashboard.putNumber("LimelightAprilTagCommand/AreaCurrent", lastArea);
+            SmartDashboard.putNumber("LimelightAprilTagCommand/AreaOffset", pidArea.getError());
+            SmartDashboard.putBoolean("LimelightAprilTagCommand/AtX?", pidOffset.atSetpoint());
+            SmartDashboard.putBoolean("LimelightAprilTagCommand/AtY?", pidArea.atSetpoint());
+            SmartDashboard.putBoolean("LimelightAprilTagCommand/Running?", true);
+        }
     }
 
     @Override

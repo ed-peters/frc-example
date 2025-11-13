@@ -9,16 +9,16 @@ import frc.robot.util.Util;
 import frc.robot.subsystems.swerve.SwerveDriveSubsystem;
 
 import static frc.robot.commands.swerve.SwerveTargetingConfig.enableLogging;
-import static frc.robot.commands.swerve.SwerveTargetingConfig.toHeadingMaxFeedback;
-import static frc.robot.commands.swerve.SwerveTargetingConfig.toHeadingP;
-import static frc.robot.commands.swerve.SwerveTargetingConfig.toHeadingD;
-import static frc.robot.commands.swerve.SwerveTargetingConfig.toHeadingTolerance;
+import static frc.robot.commands.swerve.SwerveTargetingConfig.rotateMaxFeedback;
+import static frc.robot.commands.swerve.SwerveTargetingConfig.rotateP;
+import static frc.robot.commands.swerve.SwerveTargetingConfig.rotateD;
+import static frc.robot.commands.swerve.SwerveTargetingConfig.rotateTolerance;
 
 /**
- * This shows how to automatically align the swerve drive to a specific
- * heading. This can be useful for facing an arena wall or an AprilTag.
+ * This shows how to automatically rotate the swerve drive to a specific
+ * heading. This can be useful for e.g. facing an arena wall or an AprilTag.
  */
-public class SwerveTargetHeadingCommand extends Command {
+public class SwerveRotateCommand extends Command {
 
     final SwerveDriveSubsystem drive;
     final PDController pid;
@@ -26,13 +26,13 @@ public class SwerveTargetHeadingCommand extends Command {
     double currentHeading;
     double lastCorrection;
 
-    public SwerveTargetHeadingCommand(SwerveDriveSubsystem drive, Rotation2d targetHeading) {
+    public SwerveRotateCommand(SwerveDriveSubsystem drive, Rotation2d targetHeading) {
 
         this.drive = drive;
-        this.pid = new PDController(toHeadingP,
-                    toHeadingD,
-                    toHeadingMaxFeedback,
-                    toHeadingTolerance);
+        this.pid = new PDController(rotateP,
+                rotateD,
+                rotateMaxFeedback,
+                rotateTolerance);
         this.targetDegrees = targetHeading.getDegrees();
         this.currentHeading = Double.NaN;
         this.lastCorrection = Double.NaN;

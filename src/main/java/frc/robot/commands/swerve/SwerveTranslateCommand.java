@@ -1,12 +1,12 @@
 package frc.robot.commands.swerve;
 
 import static frc.robot.commands.swerve.SwerveTargetingConfig.enableLogging;
-import static frc.robot.commands.swerve.SwerveTargetingConfig.toPoseAcceleration;
-import static frc.robot.commands.swerve.SwerveTargetingConfig.toPoseD;
-import static frc.robot.commands.swerve.SwerveTargetingConfig.toPoseMaxFeedback;
-import static frc.robot.commands.swerve.SwerveTargetingConfig.toPoseMaxVelocity;
-import static frc.robot.commands.swerve.SwerveTargetingConfig.toPoseP;
-import static frc.robot.commands.swerve.SwerveTargetingConfig.toPoseTolerance;
+import static frc.robot.commands.swerve.SwerveTargetingConfig.translateAcceleration;
+import static frc.robot.commands.swerve.SwerveTargetingConfig.translateD;
+import static frc.robot.commands.swerve.SwerveTargetingConfig.translateMaxFeedback;
+import static frc.robot.commands.swerve.SwerveTargetingConfig.translateMaxVelocity;
+import static frc.robot.commands.swerve.SwerveTargetingConfig.translateP;
+import static frc.robot.commands.swerve.SwerveTargetingConfig.translateTolerance;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -25,7 +25,7 @@ import frc.robot.util.PDController;
 import frc.robot.util.Util;
 
 /**
- * This shows how to use a trapezoid motion profile to drive the robot
+ * This shows how to use a trapezoid motion profile to translate the robot
  * smoothly to a target offset from its current position. It will drive
  * in a straight line and not change the heading of the robot at all.</p>
  *
@@ -34,7 +34,7 @@ import frc.robot.util.Util;
  * calculations are done in meters because that's what WPILib uses. So pay
  * attention to where the unit conversions are done.</p>
  */
-public class SwerveTargetPoseOffsetCommand extends Command {
+public class SwerveTranslateCommand extends Command {
 
     final SwerveDriveSubsystem drive;
     final Translation2d offset;
@@ -55,13 +55,13 @@ public class SwerveTargetPoseOffsetCommand extends Command {
     double nextX;
     double nextY;
 
-    public SwerveTargetPoseOffsetCommand(SwerveDriveSubsystem drive, Translation2d offset) {
+    public SwerveTranslateCommand(SwerveDriveSubsystem drive, Translation2d offset) {
 
         this.drive = drive;
         this.offset = offset;
         this.timer = new Timer();
-        this.pidX = new PDController(toPoseP, toPoseD, toPoseMaxFeedback, toPoseTolerance);
-        this.pidY = new PDController(toPoseP, toPoseD, toPoseMaxFeedback, toPoseTolerance);
+        this.pidX = new PDController(translateP, translateD, translateMaxFeedback, translateTolerance);
+        this.pidY = new PDController(translateP, translateD, translateMaxFeedback, translateTolerance);
 
         // this is how far we're going to travel in a straight line to the
         // target pose; we expect the offset to be supplied in inches but we
@@ -91,8 +91,8 @@ public class SwerveTargetPoseOffsetCommand extends Command {
 
         // let's also re-read configuration to create an up-to-date motion profile
         // note that configuration is in inches per second so we convert to meters
-        double maxV = Units.inchesToMeters(toPoseMaxVelocity.getAsDouble());
-        double maxA = maxV * toPoseAcceleration.getAsDouble();
+        double maxV = Units.inchesToMeters(translateMaxVelocity.getAsDouble());
+        double maxA = maxV * translateAcceleration.getAsDouble();
         profile = new TrapezoidProfile(new Constraints(maxV, maxA));
 
         // always reset the PIDs when you're doing closed loop
@@ -128,8 +128,8 @@ public class SwerveTargetPoseOffsetCommand extends Command {
         drive.drive("offset", new ChassisSpeeds(nextSpeedX, nextSpeedY, 0.0));
 
         // publish the "next" and final poses for debugging
-        drive.publishPose("AlignOffsetNext", new Pose2d(nextX, nextY, startPose.getRotation()));
-        drive.publishPose("AlignOffsetFinal", finalPose);
+        Util.publishPose("AlignOffsetNext", new Pose2d(nextX, nextY, startPose.getRotation()));
+        Util.publishPose("AlignOffsetFinal", finalPose);
 
         // in normal operation, we're probably going to wind up with
         // many instances of this command. instead of trying to register
@@ -170,7 +170,7 @@ public class SwerveTargetPoseOffsetCommand extends Command {
         // for comparing with the threshold
         distanceToTarget = Units.inchesToMeters(distanceToTarget);
 
-        if (distanceToTarget > toPoseTolerance.getAsDouble()) {
+        if (distanceToTarget > translateTolerance.getAsDouble()) {
             Util.log("[swerve-pose] !!! MISSED goal %s by %.2f !!!", finalPose, distanceToTarget);
         }
 
