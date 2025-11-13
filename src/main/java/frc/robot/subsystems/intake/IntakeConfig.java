@@ -1,6 +1,5 @@
 package frc.robot.subsystems.intake;
 
-import edu.wpi.first.math.util.Units;
 import frc.robot.util.Util;
 
 import java.util.function.DoubleSupplier;
