@@ -16,6 +16,9 @@ public interface SwerveChassis {
     /** @return the current robot heading */
     Rotation2d getHeading();
 
+    /** @return the rate of change of the heading (in degrees per second) */
+    double getYawRate();
+
     /** Reset the current heading */
     void resetHeading(Rotation2d heading);
 

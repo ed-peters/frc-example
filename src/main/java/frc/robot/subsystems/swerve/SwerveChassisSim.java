@@ -15,13 +15,17 @@ import static frc.robot.subsystems.swerve.SwerveConfig.kinematics;
  */
 public class SwerveChassisSim implements SwerveChassis {
 
-    double heading;
+    double lastHeading;
+    double currentHeading;
+    double yawRate;
     double [] velocity;
     double [] angle;
     double [] distance;
 
     public SwerveChassisSim() {
-        heading = 0.0;
+        lastHeading = 0.0;
+        currentHeading = 0.0;
+        yawRate = 0.0;
         velocity = new double[]{ 0.0, 0.0, 0.0, 0.0 };
         angle = new double[]{ 0.0, 0.0, 0.0, 0.0 };
         distance = new double[]{ 0.0, 0.0, 0.0, 0.0 };
@@ -29,12 +33,17 @@ public class SwerveChassisSim implements SwerveChassis {
 
     @Override
     public Rotation2d getHeading() {
-        return Rotation2d.fromRadians(heading);
+        return Rotation2d.fromRadians(currentHeading);
+    }
+
+    @Override
+    public double getYawRate() {
+        return yawRate;
     }
 
     @Override
     public void resetHeading(Rotation2d newHeading) {
-        heading = newHeading.getRadians();
+        currentHeading = newHeading.getRadians();
     }
 
     @Override
@@ -64,8 +73,11 @@ public class SwerveChassisSim implements SwerveChassis {
         }
 
         // calculate how much the robot's heading has changed as a result of
-        // this motion
+        // this motion, and use the difference between the last value and
+        // this new value to calculate the yaw rate
         ChassisSpeeds speeds = kinematics.toChassisSpeeds(states);
-        heading = MathUtil.angleModulus(heading + speeds.omegaRadiansPerSecond * Util.DT);
+        lastHeading = currentHeading;
+        currentHeading = MathUtil.angleModulus(currentHeading + speeds.omegaRadiansPerSecond * Util.DT);
+        yawRate = (currentHeading - lastHeading) / Util.DT;
     }
 }

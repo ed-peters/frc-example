@@ -4,7 +4,7 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.subsystems.swerve.SwerveDriveSubsystem;
-import frc.robot.subsystems.vision.LimelightEstimator;
+import frc.robot.subsystems.vision.LimelightSubsystem;
 import frc.robot.subsystems.vision.LimelightTarget;
 import frc.robot.util.PDController;
 import frc.robot.util.Util;
@@ -24,23 +24,23 @@ import static frc.robot.commands.vision.VisionConfig.limelightOffsetTolerance;
  * This aligns the robot to an AprilTag based on:
  * <ul>
  *
- *     <li>The offset of the tag to the center of the camera frame.
+ *     <li>The offset of the id to the center of the camera frame.
  *     This is based on the Limelight TX value, which is is >0 if the
- *     tag is to the right in the frame.</li>
+ *     id is to the right in the frame.</li>
  *
- *     <li>The area of the tag in the camera frame. For the Limelight,
- *     this is TA, and gets bigger the closer we are to the tag.</li>
+ *     <li>The area of the id in the camera frame. For the Limelight,
+ *     this is TA, and gets bigger the closer we are to the id.</li>
  *
  * </ul>
  *
  * By tuning this command you will be able to arrive at a reliable
- * position in front of an a tag, which is an important step in
+ * position in front of an a id, which is an important step in
  * targeting.</p>
  */
 public class LimelightAprilTagCommand extends Command {
 
     final SwerveDriveSubsystem drive;
-    final LimelightEstimator limelight;
+    final LimelightSubsystem limelight;
     final PDController pidArea;
     final PDController pidOffset;
     double lastOffset;
@@ -52,7 +52,7 @@ public class LimelightAprilTagCommand extends Command {
     boolean running;
 
     public LimelightAprilTagCommand(SwerveDriveSubsystem drive,
-                                    LimelightEstimator limelight) {
+                                    LimelightSubsystem limelight) {
         this.drive = drive;
         this.limelight = limelight;
         this.pidArea = new PDController(limelightAreaP, limelightAreaD, limelightMaxFeedback, limelightAreaTolerance);
@@ -71,7 +71,7 @@ public class LimelightAprilTagCommand extends Command {
         pidOffset.reset();
         pidArea.reset();
 
-        Util.log("[ll-tag] aligning to tag");
+        Util.log("[ll-id] aligning to id");
     }
 
     @Override
@@ -79,10 +79,10 @@ public class LimelightAprilTagCommand extends Command {
 
         LimelightTarget target = limelight.getCurrentTarget();
 
-        // if we lose sight of the tag, we can't really do anything
+        // if we lose sight of the id, we can't really do anything
         // and we have to quit
-        if (target == null || target.tag() < 1) {
-            Util.log("[ll-tag] NO TAG IN VIEW !!!");
+        if (target == null || target.id() < 1) {
+            Util.log("[ll-id] NO TAG IN VIEW !!!");
             running = false;
             return;
         }
@@ -95,19 +95,19 @@ public class LimelightAprilTagCommand extends Command {
         // direction.
         lastArea = target.area();
 
-        // the limelight reports TX as positive when the tag is offset to the
+        // the limelight reports TX as positive when the id is offset to the
         // left. if this was the case, we would want to move in the +X
         // direction, which is also positive. so we will negate the offset
         // for our feedback.
         lastOffset = -target.offset();
 
-        // calculate X speed if we're not done centering the tag
+        // calculate X speed if we're not done centering the id
         if (!achievedX) {
             lastSpeedX = pidOffset.calculate(lastOffset, limelightOffsetTarget.getAsDouble());
             achievedX = pidOffset.atSetpoint();
         }
 
-        // calculate the Y speed if the tag isn't close enough
+        // calculate the Y speed if the id isn't close enough
         if (!achievedY) {
             lastSpeedY = pidArea.calculate(lastArea, limelightAreaTarget.getAsDouble());
             achievedY = pidArea.atSetpoint();
@@ -116,7 +116,7 @@ public class LimelightAprilTagCommand extends Command {
         // we will run until we've hit both objectives
         running = !(achievedX && achievedY);
 
-        drive.drive("ll-tag", new ChassisSpeeds(
+        drive.drive("ll-id", new ChassisSpeeds(
                 lastSpeedX,
                 lastSpeedY,
                 0.0));
@@ -149,7 +149,7 @@ public class LimelightAprilTagCommand extends Command {
         // this command could run forever if we can't attain the target
         // heading for some reason. rather than lose control of the
         // robot during a match we will probably put it in a timeout.
-        // if we lost sight of the tag, or we were interrupted, we should
+        // if we lost sight of the id, or we were interrupted, we should
         // know that so we can check tuning etc.
         String which = "";
         if (!achievedX && achievedY) {
@@ -162,7 +162,7 @@ public class LimelightAprilTagCommand extends Command {
             which = "X and Y";
         }
         if (!which.isEmpty()) {
-            Util.log("[align-tag] !!! FAILED aligning to tag in %s !!!", which);
+            Util.log("[align-id] !!! FAILED aligning to id in %s !!!", which);
         }
 
         lastArea = Double.NaN;

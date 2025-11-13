@@ -4,12 +4,13 @@ import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.Vector;
 import edu.wpi.first.math.numbers.N3;
 
+import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 
 import static frc.robot.util.Util.pref;
 
 /**
- * Configuration parameters for limelight april tag targeting (all default
+ * Configuration parameters for limelight april id targeting (all default
  * values were supplied in the manufacturer's docs)
  */
 public class LimelightConfig {
@@ -28,6 +29,9 @@ public class LimelightConfig {
      * MegaTag2 algorithm
      */
     public static final Vector<N3> confidenceMegaTag2 = VecBuilder.fill(.7,.7,9999999);
+
+    /** Which algorithm to use */
+    public static final BooleanSupplier useMegaTag2 = pref("LimelightPose/MegaTag2?", true);
 
     /** Thresholds for classic algorithm */
     public static final DoubleSupplier classicMaxAmbiguity = pref("LimelightPose/ClassicMaxAmbiguity", 0.7);

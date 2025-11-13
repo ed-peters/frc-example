@@ -7,7 +7,7 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.DeferredCommand;
 import frc.robot.commands.swerve.SwerveRotateCommand;
 import frc.robot.commands.swerve.SwerveTranslateCommand;
-import frc.robot.subsystems.vision.LimelightEstimator;
+import frc.robot.subsystems.vision.LimelightSubsystem;
 import frc.robot.subsystems.vision.LimelightTarget;
 import frc.robot.util.Util;
 import frc.robot.subsystems.swerve.SwerveDriveSubsystem;
@@ -24,10 +24,10 @@ import java.util.function.Supplier;
  *     in view; and,</li>
  *
  *     <li>Align the robot in the X and Y directions to be directly
- *     "in front" of the tag; and,</li>
+ *     "in front" of the id; and,</li>
  *
  *     <li>Drive to an offset of the "directly in front of
- *     the tag" position</li>
+ *     the id" position</li>
  *
  * </ul>
  *
@@ -37,23 +37,23 @@ import java.util.function.Supplier;
 public class ThreeStageTargetingCommand extends DeferredCommand {
 
     public ThreeStageTargetingCommand(SwerveDriveSubsystem drive,
-                                      LimelightEstimator limelight,
+                                      LimelightSubsystem limelight,
                                       Supplier<Translation2d> translationSupplier) {
 
         // this is always a deferred command, since we won't know whether we
-        // have a tag in view until we actually run
+        // have a id in view until we actually run
         super(() -> {
 
             // get the currently in-view target; if there isn't one,
             // we can't do anything
             LimelightTarget target = limelight.getCurrentTarget();
-            if (target == null || target.tag() < 1) {
+            if (target == null || target.id() < 1) {
                 Util.log("[ll-target] NO TAG IN VIEW!!!");
                 return Commands.none();
             }
 
-            // we are going to rotate to face the tag; this means our heading
-            // will be 180 degrees off from the tag
+            // we are going to rotate to face the id; this means our heading
+            // will be 180 degrees off from the id
             Command rotate = new SwerveRotateCommand(
                     drive,
                     target.pose().getRotation().plus(Rotation2d.k180deg));

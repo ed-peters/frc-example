@@ -88,7 +88,7 @@ public class Util {
     // ===========================================================
 
     // holds the field layout once we've loaded it (which happens the
-    // first time we request tag info)
+    // first time we request id info)
     static AprilTagFieldLayout layout = null;
 
     /** @return information about the supplied AprilTag */

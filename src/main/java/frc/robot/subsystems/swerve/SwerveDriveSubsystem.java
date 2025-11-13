@@ -99,10 +99,18 @@ public class SwerveDriveSubsystem extends SubsystemBase {
 
     /**
      * @return the current heading of the robot (you should always get this
-     * from the gyro)
+     * from the gyro hardware)
      */
     public Rotation2d getHeading() {
         return chassis.getHeading();
+    }
+
+    /**
+     * @return the current rate of change of the heading in degrees per
+     * second (you should always get this from the gyro hardware)
+     */
+    public double getYawRate() {
+        return chassis.getYawRate();
     }
 
     /** @return the pose as calculated purely on the odometry */
@@ -129,7 +137,7 @@ public class SwerveDriveSubsystem extends SubsystemBase {
      * to "trust" the vision estimate, and approximately how old it is (in
      * seconds since the robot started up).
      */
-    public void addVisionPose(Pose2d pose, Matrix<N3,N1> stdDevs, double timestamp) {
+    public void addVisionPose(Pose2d pose, double timestamp, Matrix<N3,N1> stdDevs) {
         if (pose != null) {
             estimator.setVisionMeasurementStdDevs(stdDevs);
             estimator.addVisionMeasurement(pose, timestamp);
