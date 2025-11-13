@@ -26,7 +26,7 @@ import static frc.robot.commands.vision.VisionConfig.limelightOffsetTolerance;
  *
  *     <li>The offset of the id to the center of the camera frame.
  *     This is based on the Limelight TX value, which is is >0 if the
- *     id is to the right in the frame.</li>
+ *     tag is to the right in the frame.</li>
  *
  *     <li>The area of the id in the camera frame. For the Limelight,
  *     this is TA, and gets bigger the closer we are to the id.</li>

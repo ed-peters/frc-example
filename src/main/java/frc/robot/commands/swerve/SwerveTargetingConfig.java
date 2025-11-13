@@ -22,18 +22,18 @@ public class SwerveTargetingConfig {
     public static DoubleSupplier rotateP = pref("SwerveRotate/P", 10.0);
     public static DoubleSupplier rotateD = pref("SwerveRotate/D", 0.0);
     public static DoubleSupplier rotateTolerance = pref("SwerveRotate/Tolerance", 1.0);
-    public static DoubleSupplier rotateMaxFeedback = pref("SwerveRotate/MaxFeedback", 120.0);
+    public static DoubleSupplier rotateMaxVelocity = pref("SwerveRotate/MaxVelocity", 120.0);
 
     // ==================================================================
     // TRANSLATING
     // ==================================================================
 
     /** Properties for driving to a pose offset */
-    public static DoubleSupplier translateP = pref("SwerveTranslate/P", 0.0);
+    public static DoubleSupplier translateP = pref("SwerveTranslate/P",2.0);
     public static DoubleSupplier translateD = pref("SwerveTranslate/D", 0.0);
     public static DoubleSupplier translateMaxFeedback = pref("SwerveTranslate/MaxFeedback", 10.0);
     public static DoubleSupplier translateMaxVelocity = pref("SwerveTranslate/MaxVelocity", 48.0);
     public static DoubleSupplier translateAcceleration = pref("SwerveTranslate/Acceleration", 2.0);
-    public static DoubleSupplier translateTolerance = pref("SwerveTranslate/Tolerance", 4);
+    public static DoubleSupplier translateTolerance = pref("SwerveTranslate/Tolerance", 2.0);
 
 }

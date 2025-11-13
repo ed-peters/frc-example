@@ -30,7 +30,6 @@ import static frc.robot.subsystems.vision.LimelightConfig.limelightName;
 public class LimelightSubsystem extends SubsystemBase {
 
     enum Status {
-        NO_STATUS,
         NO_ESTIMATE,
         NO_TAG,
         TOO_AMBIGUOUS,
@@ -51,15 +50,18 @@ public class LimelightSubsystem extends SubsystemBase {
     double lastMegaTagArea;
 
     LimelightTarget lastTarget;
+    Pose2d lastPose;
 
     public LimelightSubsystem(SwerveDriveSubsystem drive) {
 
         this.drive = drive;
-        this.lastClassicStatus = Status.NO_STATUS;
+        this.lastClassicStatus = Status.NO_ESTIMATE;
         this.lastClassicAmbiguity = Double.NaN;
         this.lastClassicDistance = Double.NaN;
-        this.lastMegaTagStatus = Status.NO_STATUS;
+        this.lastMegaTagStatus = Status.NO_ESTIMATE;
         this.lastMegaTagArea = Double.NaN;
+        this.lastTarget = LimelightTarget.NO_TARGET;
+        this.lastPose = Util.NAN_POSE;
 
         SmartDashboard.putData("LimelightEstimator", builder -> {
             builder.addDoubleProperty("PoseClassic/Ambiguity", () -> lastClassicAmbiguity, null);
@@ -75,11 +77,14 @@ public class LimelightSubsystem extends SubsystemBase {
         });
     }
 
-    /**
-     * @return information about the current in-view id
-     */
+    /** @return information about the current in-view id */
     public LimelightTarget getCurrentTarget() {
         return lastTarget;
+    }
+
+    /** @return the current pose (null if there isn't one) */
+    public Pose2d getCurrentPose() {
+        return lastPose;
     }
 
     @Override
@@ -96,6 +101,13 @@ public class LimelightSubsystem extends SubsystemBase {
             updateEstimateClassic();;
         }
 
+        // we publish the target pose if we have one; if we don't, the
+        // last published pose will remain - this helps debugging when
+        // we lose contact with targets
+        if (lastPose != null) {
+            Util.publishPose("LimelightPose", lastPose);
+        }
+
         // see if there's a target in view
         int id = (int) LimelightHelpers.getFiducialID(limelightName);
         if (id > 0) {
@@ -103,8 +115,10 @@ public class LimelightSubsystem extends SubsystemBase {
             double offset = LimelightHelpers.getTX(limelightName);
             double area = LimelightHelpers.getTA(limelightName);
             lastTarget = new LimelightTarget(id, pose, offset, area);
+            Util.publishPose("LimelightTarget", pose);
         } else {
             lastTarget = LimelightTarget.NO_TARGET;
+            Util.publishPose("LimelightTarget", Util.NAN_POSE);
         }
     }
 
@@ -114,16 +128,16 @@ public class LimelightSubsystem extends SubsystemBase {
      */
     private void updateEstimateClassic() {
 
-        lastClassicStatus = Status.NO_STATUS;
+        lastClassicStatus = Status.NO_ESTIMATE;
         lastClassicAmbiguity = Double.NaN;
         lastClassicDistance = Double.NaN;
+        lastPose = Util.NAN_POSE;
 
         // get an estimate; if there isn't one, or we don't have exactly
         // one item in view, or it's not a recognized AprilTag, we'll
         // ignore it
         PoseEstimate estimate = LimelightHelpers.getBotPoseEstimate_wpiBlue(limelightName);
-        if (estimate == null || estimate.tagCount != 1 || estimate.rawFiducials.length == 1) {
-            lastClassicStatus = Status.NO_ESTIMATE;
+        if (estimate == null || estimate.tagCount != 1 || estimate.rawFiducials.length != 1) {
             return;
         }
 
@@ -143,8 +157,8 @@ public class LimelightSubsystem extends SubsystemBase {
         }
 
         lastClassicStatus = Status.SUCCESS;
+        lastPose = estimate.pose;
 
-        Util.publishPose("LimelightClassic", estimate.pose);
         drive.addVisionPose(
                 estimate.pose,
                 estimate.timestampSeconds,
@@ -159,14 +173,15 @@ public class LimelightSubsystem extends SubsystemBase {
             double yawDegrees,
             double yawRateDegreesPerSecond) {
 
-        lastMegaTagStatus = Status.NO_STATUS;
+        lastMegaTagStatus = Status.NO_ESTIMATE;
         lastMegaTagYaw = yawDegrees;
         lastMegaTagYawRate = yawRateDegreesPerSecond;
         lastMegaTagArea = Double.NaN;
+        lastPose = Util.NAN_POSE;
 
         // if we're spinning around too fast, LL estimates get wacky
         if (yawRateDegreesPerSecond > megaTagMaxYawRate.getAsDouble()) {
-            lastMegaTagStatus = Status.TOO_FAR;
+            lastMegaTagStatus = Status.SPINNING;
             return;
         }
 
@@ -176,8 +191,8 @@ public class LimelightSubsystem extends SubsystemBase {
         // get an estimate; if there isn't one, or we don't have exactly
         // one item in view, or it's not a recognized AprilTag, we'll
         // ignore it
-        PoseEstimate estimate = LimelightHelpers.getBotPoseEstimate_wpiBlue(limelightName);
-        if (estimate == null || estimate.tagCount != 1 || estimate.rawFiducials.length == 1) {
+        PoseEstimate estimate = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2(limelightName);
+        if (estimate == null || estimate.tagCount != 1 || estimate.rawFiducials.length != 1) {
             lastMegaTagStatus = Status.NO_ESTIMATE;
             return;
         }
@@ -190,8 +205,8 @@ public class LimelightSubsystem extends SubsystemBase {
         }
 
         lastMegaTagStatus = Status.SUCCESS;
+        lastPose = estimate.pose;
 
-        Util.publishPose("LimelightMegaTag2", estimate.pose);
         drive.addVisionPose(
                 estimate.pose,
                 estimate.timestampSeconds,

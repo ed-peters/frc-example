@@ -64,6 +64,12 @@ public class ThreeStageTargetingCommand extends DeferredCommand {
                     drive,
                     limelight);
 
+            Translation2d offset = translationSupplier.get();
+            if (offset == null) {
+                Util.log("[ll-target] preparing two-stage targeting");
+                return rotate.andThen(align);
+            }
+
             // translate to the target position
             Command translate = new SwerveTranslateCommand(drive, translationSupplier.get());
             Util.log("[ll-target] preparing three-stage targeting");

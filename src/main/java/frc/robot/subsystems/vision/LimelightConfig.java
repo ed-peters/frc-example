@@ -18,6 +18,12 @@ public class LimelightConfig {
     /** Name of the limelight in SmartDashboard */
     public static final String limelightName = "limelight";
 
+    /** Key in SmartDashboed for classic pose estimates */
+    public static final String classicPoseKey = "botpose_wpiblue";
+
+    /** Key in SmartDashboed for mega tag pose estimates */
+    public static final String megaTagPoseKey = "botpose_orb_wpiblue";
+
     /**
      * Confidence value to supply with the vision estimate when using the
      * classic algorithm

@@ -9,7 +9,7 @@ import frc.robot.util.Util;
 import frc.robot.subsystems.swerve.SwerveDriveSubsystem;
 
 import static frc.robot.commands.swerve.SwerveTargetingConfig.enableLogging;
-import static frc.robot.commands.swerve.SwerveTargetingConfig.rotateMaxFeedback;
+import static frc.robot.commands.swerve.SwerveTargetingConfig.rotateMaxVelocity;
 import static frc.robot.commands.swerve.SwerveTargetingConfig.rotateP;
 import static frc.robot.commands.swerve.SwerveTargetingConfig.rotateD;
 import static frc.robot.commands.swerve.SwerveTargetingConfig.rotateTolerance;
@@ -31,7 +31,7 @@ public class SwerveRotateCommand extends Command {
         this.drive = drive;
         this.pid = new PDController(rotateP,
                 rotateD,
-                rotateMaxFeedback,
+                rotateMaxVelocity,
                 rotateTolerance);
         this.targetDegrees = targetHeading.getDegrees();
         this.currentHeading = Double.NaN;

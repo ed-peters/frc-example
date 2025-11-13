@@ -183,18 +183,6 @@ public class SwerveDriveSubsystem extends SubsystemBase {
     }
 
     /**
-     * Reset the pose of the robot to whatever the vision system thinks it is
-     */
-    public void resetWithVisionPose() {
-        Pose2d pose = getVisionPose();
-        if (pose == null || pose == Util.NAN_POSE) {
-            Util.log("[swerve] refusing to reset pose from vision (no available pose)");
-        } else {
-            resetPose(pose);
-        }
-    }
-
-    /**
      * Tells the robot to drive at the specified speeds in "robot
      * relative" coordinates
      */
@@ -298,19 +286,5 @@ public class SwerveDriveSubsystem extends SubsystemBase {
     /** @return a command to set the pose to 0 */
     public Command zeroPoseCommand() {
         return runOnce(() -> resetPose(Util.ZERO_POSE));
-    }
-
-    /**
-     * @return a command to set the pose to the most recent vision pose (this
-     * is very useful on test fields)
-     */
-    public Command useVisionPoseCommand() {
-        return runOnce(() -> {
-            if (lastVisionPose == null) {
-                Util.log("[swerve] can't reset pose (no vision pose available)");
-            } else {
-                resetPose(lastVisionPose);
-            }
-        });
     }
 }
