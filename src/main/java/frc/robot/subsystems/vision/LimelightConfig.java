@@ -18,10 +18,10 @@ public class LimelightConfig {
     /** Name of the limelight in SmartDashboard */
     public static final String limelightName = "limelight";
 
-    /** Key in SmartDashboed for classic pose estimates */
+    /** Key in SmartDashboard for classic pose estimates */
     public static final String classicPoseKey = "botpose_wpiblue";
 
-    /** Key in SmartDashboed for mega tag pose estimates */
+    /** Key in SmartDashboard for mega tag pose estimates */
     public static final String megaTagPoseKey = "botpose_orb_wpiblue";
 
     /**
