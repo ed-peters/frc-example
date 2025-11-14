@@ -92,6 +92,11 @@ public class SwerveDriveSubsystem extends SubsystemBase {
         });
     }
 
+    /** @return current speeds */
+    public ChassisSpeeds getCurrentSpeed() {
+        throw new UnsupportedOperationException();
+    }
+
     /** @return kinematics for the drive */
     public SwerveDriveKinematics getKinematics() {
         return kinematics;
