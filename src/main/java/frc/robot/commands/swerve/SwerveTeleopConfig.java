@@ -44,7 +44,7 @@ public class SwerveTeleopConfig {
     public static final BooleanSupplier fieldRelative = pref("SwerveTeleop/FieldRelative?", true);
 
     /** Turn drift correction on/off */
-    public static BooleanSupplier driftCorrection = pref("SwerveTeleop/DrfitCorrection?", true);
+    public static BooleanSupplier driftCorrection = pref("SwerveTeleop/DriftCorrection?", true);
 
     /** Feedback constant for drift correction: P */
     public static DoubleSupplier driftP = pref("SwerveTeleop/DriftP", 2.0);

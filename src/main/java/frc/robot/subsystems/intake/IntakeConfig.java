@@ -26,34 +26,25 @@ public class IntakeConfig {
     /** Should the motor brake be enabled by default? */
     public static final boolean defaultBrakeEnabled = true;
 
-    /** Feedforward tuning parameter */
-    public static final DoubleSupplier v = Util.pref("IntakeSubsystem/V", 1.0);
-
-    /** Feedback tuning parameter */
-    public static final DoubleSupplier p = Util.pref("IntakeSubsystem/P", 1.0);
-
-    /** Feedback tuning parameter */
-    public static final DoubleSupplier d = Util.pref("IntakeSubsystem/D", 1.0);
+    /**
+     * Feedforward and feedback tuning constants; you'll determine values
+     * for these during tuning
+     */
+    public static final DoubleSupplier v = Util.pref("IntakeSubsystem/kV", 1.0);
+    public static final DoubleSupplier p = Util.pref("IntakeSubsystem/kP", 1.0);
+    public static final DoubleSupplier d = Util.pref("IntakeSubsystem/kD", 1.0);
 
     /** How close to target velocity will we consider being "good enough"? */
     public static final DoubleSupplier tolerance = Util.pref("IntakeSubsystem/Tolerance", 1.0);
 
-    /** Preset speed for collecting gamepieces */
+    /** Preset speeds for different tasks, in feet per second */
     public static final DoubleSupplier collectSpeed = Util.pref("IntakeSubsystem/CollectSpeed", 1.0);
-
-    /** Preset speed for repositioning gamepieces in the intake */
     public static final DoubleSupplier repositionSpeed = Util.pref("IntakeSubsystem/RepositionSpeed", 1.0);
-
-    /** Duration for running during the repositioning movement */
-    public static final DoubleSupplier repositionSeconds = Util.pref("IntakeSubsystem/RepositionSeconds", 1.0);
-
-    /** Preset speed for feeding gamepieces to the shooter */
     public static final DoubleSupplier feedSpeed = Util.pref("IntakeSubsystem/FeedSpeed", 1.0);
-
-    /** Preset speed for clearing the intake */
     public static final DoubleSupplier ejectSpeed = Util.pref("IntakeSubsystem/EjectSpeed", 1.0);
 
-    /** Duration for running during the clearing movement */
+    /** Preset durations for time-based tasks, in seconds */
     public static final DoubleSupplier ejectSeconds = Util.pref("IntakeSubsystem/EjectSeconds", 1.0);
-    
+    public static final DoubleSupplier repositionSeconds = Util.pref("IntakeSubsystem/RepositionSeconds", 1.0);
+
 }

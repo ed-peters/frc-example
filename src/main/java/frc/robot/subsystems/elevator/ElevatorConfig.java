@@ -46,10 +46,10 @@ public class ElevatorConfig {
      * Feedforward and feedback tuning constants; you'll determine values
      * for these using the {@link frc.robot.commands.elevator.ElevatorTuningCommand}
      */
-    public static final DoubleSupplier p = pref("ElevatorSubsystem/P", 3.0);
-    public static final DoubleSupplier d = pref("ElevatorSubsystem/D", 0.3);
-    public static final DoubleSupplier g = pref("ElevatorSubsystem/G", 1.3028);
-    public static final DoubleSupplier v = pref("ElevatorSubsystem/V", 0.0992);
+    public static final DoubleSupplier p = pref("ElevatorSubsystem/kP", 3.0);
+    public static final DoubleSupplier d = pref("ElevatorSubsystem/kD", 0.3);
+    public static final DoubleSupplier g = pref("ElevatorSubsystem/kG", 1.3028);
+    public static final DoubleSupplier v = pref("ElevatorSubsystem/kV", 0.0992);
 
     /**
      * Maximum feedback from feedback; you will probably want to keep this

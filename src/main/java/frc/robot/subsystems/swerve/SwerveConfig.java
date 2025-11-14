@@ -35,10 +35,15 @@ public class SwerveConfig {
             new Translation2d(-WHEEL_BASE_M / 2, TRACK_WIDTH_M / 2),
             new Translation2d(-WHEEL_BASE_M / 2, -TRACK_WIDTH_M / 2));
 
-    /** Maximum wheel speed - this is applied for hardware safety */
+    /**
+     * Maximum wheel speed in meters per second no matter what mode we're in;
+     * this is applied for last-ditch hardware safety and can be pretty high
+     */
     public static DoubleSupplier maximumWheelSpeed = pref("SwerveDriveSubsystem/MaxSpeed", 15.0);
 
-    /** Enable/disable cosine compensation */
+    /**
+     * Enable/disable cosine compensation
+     */
     public static BooleanSupplier cosineCompensation = pref("SwerveDriveSubsystem/CosineCompensation", false);
 
 }

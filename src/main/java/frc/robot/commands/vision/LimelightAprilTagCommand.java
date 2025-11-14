@@ -9,15 +9,15 @@ import frc.robot.subsystems.vision.LimelightSubsystem;
 import frc.robot.subsystems.vision.LimelightTarget;
 import frc.robot.util.Util;
 
-import static frc.robot.commands.vision.VisionConfig.enableLogging;
-import static frc.robot.commands.vision.VisionConfig.limelightAreaD;
-import static frc.robot.commands.vision.VisionConfig.limelightAreaP;
-import static frc.robot.commands.vision.VisionConfig.limelightAreaTarget;
-import static frc.robot.commands.vision.VisionConfig.limelightAreaTolerance;
-import static frc.robot.commands.vision.VisionConfig.limelightOffsetD;
-import static frc.robot.commands.vision.VisionConfig.limelightOffsetP;
-import static frc.robot.commands.vision.VisionConfig.limelightOffsetTarget;
-import static frc.robot.commands.vision.VisionConfig.limelightOffsetTolerance;
+import static frc.robot.commands.vision.LimelightConfig.enableLogging;
+import static frc.robot.commands.vision.LimelightConfig.limelightAreaD;
+import static frc.robot.commands.vision.LimelightConfig.limelightAreaP;
+import static frc.robot.commands.vision.LimelightConfig.limelightAreaTarget;
+import static frc.robot.commands.vision.LimelightConfig.limelightAreaTolerance;
+import static frc.robot.commands.vision.LimelightConfig.limelightOffsetD;
+import static frc.robot.commands.vision.LimelightConfig.limelightOffsetP;
+import static frc.robot.commands.vision.LimelightConfig.limelightOffsetTarget;
+import static frc.robot.commands.vision.LimelightConfig.limelightOffsetTolerance;
 
 /**
  * This aligns the robot to an AprilTag based on:
