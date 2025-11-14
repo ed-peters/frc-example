@@ -1,5 +1,6 @@
 package frc.robot.subsystems.intake;
 
+import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -7,7 +8,6 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.commands.intake.IntakeIdleCommand;
 import frc.robot.commands.intake.IntakeRpsCommand;
 import frc.robot.util.Motor;
-import frc.robot.util.PDController;
 import frc.robot.util.Util;
 
 import java.util.function.BooleanSupplier;
@@ -50,7 +50,7 @@ public class IntakeSubsystem extends SubsystemBase {
 
     final Motor motor;
     final BooleanSupplier sensor;
-    final PDController pid;
+    final PIDController pid;
 
     // displaying what a subsystem "thinks" it's doing on the dashboard
     // is really helpful when you're debugging the robot
@@ -65,7 +65,7 @@ public class IntakeSubsystem extends SubsystemBase {
 
         this.motor = motor;
         this.sensor = sensor;
-        this.pid = new PDController(p, d, null, tolerance);
+        this.pid = new PIDController(p.getAsDouble(), 0.0, d.getAsDouble());
         this.currentCommand = "";
         this.targetRps = Double.NaN;
 
@@ -91,6 +91,14 @@ public class IntakeSubsystem extends SubsystemBase {
     /** @return linear velocity of the shooter wheel in feet per second */
     public double getLinearVelocity() {
         return getWheelVelocity() * wheelCircumferenceFeet;
+    }
+
+    /**
+     * Reset the PID controller; closed loop commands should call this when
+     * they initialize
+     */
+    public void resetPid() {
+        Util.resetPid(pid, p, d, tolerance);
     }
 
     /** Runs the subsystem in closed loop mode */

@@ -22,6 +22,7 @@ public class IntakeRpsCommand extends Command {
 
     @Override
     public void initialize() {
+        intake.resetPid();
         rps = speedSupplier.getAsDouble();
         Util.log("[intake] running %s @ %.2f", name, rps);
     }

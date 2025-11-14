@@ -3,6 +3,7 @@ package frc.robot.util;
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -81,6 +82,24 @@ public class Util {
      */
     public static double angleModulus(double degrees) {
         return MathUtil.inputModulus(degrees, -180.0, 180.0);
+    }
+
+    // ===========================================================
+    // PIDs
+    // ===========================================================
+
+    /**
+     * Resets a PID controller to use the most recent tuning constants
+     * and clear out accumulated error
+     */
+    public static void resetPid(PIDController pid,
+                         DoubleSupplier p,
+                         DoubleSupplier d,
+                         DoubleSupplier tolerance) {
+        pid.setP(p.getAsDouble());
+        pid.setD(d.getAsDouble());
+        pid.setTolerance(tolerance.getAsDouble());
+        pid.reset();
     }
 
     // ===========================================================

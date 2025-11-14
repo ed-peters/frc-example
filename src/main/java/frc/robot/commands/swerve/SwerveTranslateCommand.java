@@ -8,6 +8,7 @@ import static frc.robot.commands.swerve.SwerveTargetingConfig.translateMaxVeloci
 import static frc.robot.commands.swerve.SwerveTargetingConfig.translateP;
 import static frc.robot.commands.swerve.SwerveTargetingConfig.translateTolerance;
 
+import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform2d;
@@ -21,7 +22,6 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.subsystems.swerve.SwerveDriveSubsystem;
-import frc.robot.util.PDController;
 import frc.robot.util.Util;
 
 /**
@@ -45,8 +45,8 @@ public class SwerveTranslateCommand extends Command {
     final double sin;
     final State startState;
     final State finalState;
-    final PDController pidX;
-    final PDController pidY;
+    final PIDController pidX;
+    final PIDController pidY;
     TrapezoidProfile profile;
     Pose2d startPose;
     Pose2d finalPose;
@@ -60,8 +60,8 @@ public class SwerveTranslateCommand extends Command {
         this.drive = drive;
         this.offset = offset;
         this.timer = new Timer();
-        this.pidX = new PDController(translateP, translateD, translateMaxFeedback, translateTolerance);
-        this.pidY = new PDController(translateP, translateD, translateMaxFeedback, translateTolerance);
+        this.pidX = new PIDController(translateP.getAsDouble(), 0.0, translateD.getAsDouble());
+        this.pidY = new PIDController(translateP.getAsDouble(), 0.0, translateD.getAsDouble());
 
         // this is how far we're going to travel in a straight line to the
         // target pose; we expect the offset to be supplied in inches but we
@@ -96,7 +96,15 @@ public class SwerveTranslateCommand extends Command {
         profile = new TrapezoidProfile(new Constraints(maxV, maxA));
 
         // always reset the PIDs when you're doing closed loop
+
+        pidX.setP(translateP.getAsDouble());
+        pidX.setD(translateD.getAsDouble());
+        pidX.setTolerance(translateTolerance.getAsDouble());
         pidX.reset();
+
+        pidY.setP(translateP.getAsDouble());
+        pidY.setD(translateD.getAsDouble());
+        pidY.setTolerance(translateTolerance.getAsDouble());
         pidY.reset();
 
         Util.log("[swerve-pose] headed to %s", finalPose);
@@ -121,8 +129,12 @@ public class SwerveTranslateCommand extends Command {
 
         // we also use the target pose for feedback, to stay on target
         Pose2d currentPose = drive.getFusedPose();
-        nextSpeedX += pidX.calculate(currentPose.getX(), nextX);
-        nextSpeedY += pidY.calculate(currentPose.getY(), nextY);
+        nextSpeedX += Util.applyClamp(
+                pidX.calculate(currentPose.getX(), nextX),
+                translateMaxFeedback);
+        nextSpeedY += Util.applyClamp(
+                pidY.calculate(currentPose.getY(), nextY),
+                translateMaxFeedback);
 
         // let's drive!
         drive.drive("offset", new ChassisSpeeds(nextSpeedX, nextSpeedY, 0.0));

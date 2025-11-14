@@ -1,6 +1,7 @@
 package frc.robot.subsystems.elevator;
 
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -9,7 +10,6 @@ import frc.robot.commands.elevator.ElevatorTeleopCommand;
 import frc.robot.commands.elevator.ElevatorTrapezoidCommand;
 import frc.robot.commands.elevator.ElevatorTuningCommand;
 import frc.robot.util.Motor;
-import frc.robot.util.PDController;
 import frc.robot.util.Util;
 
 import java.util.function.DoubleSupplier;
@@ -52,7 +52,7 @@ import static frc.robot.subsystems.elevator.ElevatorConfig.v;
 public class ElevatorSubsystem extends SubsystemBase {
 
     final Motor motor;
-    final PDController pid;
+    final PIDController pid;
     String currentCommand;
 
     // we'll keep these updated during periodic mode
@@ -76,7 +76,7 @@ public class ElevatorSubsystem extends SubsystemBase {
     public ElevatorSubsystem(Motor motor) {
 
         this.motor = motor;
-        this.pid = new PDController(p, d, maxFeedback, tolerance);
+        this.pid = new PIDController(p.getAsDouble(), 0.0, d.getAsDouble(), 0.0);
         this.currentCommand = "";
         this.goalHeight = Double.NaN;
         this.nextHeight = Double.NaN;
@@ -170,6 +170,14 @@ public class ElevatorSubsystem extends SubsystemBase {
     // =============================================================
 
     /**
+     * Reset the PID controller; all closed loop commands (hold, tune,
+     * trapezoid) should call this when they initialize
+     */
+    public void resetPid() {
+        Util.resetPid(pid, p, d, tolerance);
+    }
+
+    /**
      * Run the elevator in closed-loop mode by specifying a "next" height
      * and velocity, and an optional final goal height
      */
@@ -188,20 +196,12 @@ public class ElevatorSubsystem extends SubsystemBase {
 
         // calculate feedforward and feedback and sum them
         lastFeedforward = g.getAsDouble() + v.getAsDouble() * nextVelocity;
-        lastFeedback = pid.calculate(getCurrentHeight(), nextHeight);
+        lastFeedback = Util.applyClamp(
+                pid.calculate(getCurrentHeight(), nextHeight),
+                maxFeedback);
         lastVolts = Util.clampVolts(lastFeedforward + lastFeedback);
 
         motor.applyVolts(lastVolts);
-    }
-
-    /**
-     * Reset the PID controller and trapezoid profile to reflect the
-     * most recent configuration, and clear calculated error; all closed
-     * loop commands (hold, tune, trapezoid) should call this when they
-     * initialize
-     */
-    public void resetPid() {
-        pid.reset();
     }
 
     // =============================================================

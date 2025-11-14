@@ -1,10 +1,10 @@
 package frc.robot.commands.swerve;
 
+import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
-import frc.robot.util.PDController;
 import frc.robot.util.Util;
 import frc.robot.subsystems.swerve.SwerveDriveSubsystem;
 
@@ -21,7 +21,7 @@ import static frc.robot.commands.swerve.SwerveTargetingConfig.rotateTolerance;
 public class SwerveRotateCommand extends Command {
 
     final SwerveDriveSubsystem drive;
-    final PDController pid;
+    final PIDController pid;
     final double targetDegrees;
     double currentHeading;
     double lastCorrection;
@@ -29,10 +29,7 @@ public class SwerveRotateCommand extends Command {
     public SwerveRotateCommand(SwerveDriveSubsystem drive, Rotation2d targetHeading) {
 
         this.drive = drive;
-        this.pid = new PDController(rotateP,
-                rotateD,
-                rotateMaxVelocity,
-                rotateTolerance);
+        this.pid = new PIDController(rotateP.getAsDouble(), 0.0, rotateD.getAsDouble());
         this.targetDegrees = targetHeading.getDegrees();
         this.currentHeading = Double.NaN;
         this.lastCorrection = Double.NaN;
@@ -49,7 +46,7 @@ public class SwerveRotateCommand extends Command {
     public void initialize() {
 
         // always reset the PID when you're doing closed loop
-        pid.reset();
+        Util.resetPid(pid, rotateP, rotateD, rotateTolerance);
     }
 
     @Override
@@ -58,7 +55,9 @@ public class SwerveRotateCommand extends Command {
         // calculate the current heading and correction speed, and
         // apply it to rotate the drive
         currentHeading = drive.getHeading().getDegrees();
-        lastCorrection = pid.calculate(currentHeading, targetDegrees);
+        lastCorrection = Util.applyClamp(
+                pid.calculate(currentHeading, targetDegrees),
+                rotateMaxVelocity);
         drive.drive("heading", new ChassisSpeeds(
                 0.0,
                 0.0,

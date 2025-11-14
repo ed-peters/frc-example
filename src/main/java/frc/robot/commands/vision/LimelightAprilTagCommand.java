@@ -1,12 +1,12 @@
 package frc.robot.commands.vision;
 
+import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.subsystems.swerve.SwerveDriveSubsystem;
 import frc.robot.subsystems.vision.LimelightSubsystem;
 import frc.robot.subsystems.vision.LimelightTarget;
-import frc.robot.util.PDController;
 import frc.robot.util.Util;
 
 import static frc.robot.commands.vision.VisionConfig.enableLogging;
@@ -14,7 +14,6 @@ import static frc.robot.commands.vision.VisionConfig.limelightAreaD;
 import static frc.robot.commands.vision.VisionConfig.limelightAreaP;
 import static frc.robot.commands.vision.VisionConfig.limelightAreaTarget;
 import static frc.robot.commands.vision.VisionConfig.limelightAreaTolerance;
-import static frc.robot.commands.vision.VisionConfig.limelightMaxFeedback;
 import static frc.robot.commands.vision.VisionConfig.limelightOffsetD;
 import static frc.robot.commands.vision.VisionConfig.limelightOffsetP;
 import static frc.robot.commands.vision.VisionConfig.limelightOffsetTarget;
@@ -41,8 +40,8 @@ public class LimelightAprilTagCommand extends Command {
 
     final SwerveDriveSubsystem drive;
     final LimelightSubsystem limelight;
-    final PDController pidArea;
-    final PDController pidOffset;
+    final PIDController pidArea;
+    final PIDController pidOffset;
     double lastOffset;
     double lastArea;
     double lastSpeedX;
@@ -55,8 +54,8 @@ public class LimelightAprilTagCommand extends Command {
                                     LimelightSubsystem limelight) {
         this.drive = drive;
         this.limelight = limelight;
-        this.pidArea = new PDController(limelightAreaP, limelightAreaD, limelightMaxFeedback, limelightAreaTolerance);
-        this.pidOffset = new PDController(limelightOffsetP, limelightOffsetD, limelightMaxFeedback, limelightOffsetTolerance);
+        this.pidArea = new PIDController(limelightAreaP.getAsDouble(), 0.0, limelightAreaD.getAsDouble());
+        this.pidOffset = new PIDController(limelightOffsetP.getAsDouble(), 0.0, limelightOffsetD.getAsDouble());
         addRequirements(drive);
     }
 
@@ -68,8 +67,8 @@ public class LimelightAprilTagCommand extends Command {
         running = true;
 
         // always reset the PIDs when you're doing closed loop
-        pidOffset.reset();
-        pidArea.reset();
+        Util.resetPid(pidOffset, limelightOffsetP, limelightOffsetD, limelightOffsetTolerance);
+        Util.resetPid(pidArea, limelightAreaP, limelightAreaD, limelightAreaTolerance);
 
         Util.log("[ll-id] aligning to id");
     }
