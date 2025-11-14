@@ -1,13 +1,5 @@
 package frc.robot.commands.swerve;
 
-import static frc.robot.commands.swerve.SwerveTargetingConfig.enableLogging;
-import static frc.robot.commands.swerve.SwerveTargetingConfig.translateAcceleration;
-import static frc.robot.commands.swerve.SwerveTargetingConfig.translateD;
-import static frc.robot.commands.swerve.SwerveTargetingConfig.translateMaxFeedback;
-import static frc.robot.commands.swerve.SwerveTargetingConfig.translateMaxVelocity;
-import static frc.robot.commands.swerve.SwerveTargetingConfig.translateP;
-import static frc.robot.commands.swerve.SwerveTargetingConfig.translateTolerance;
-
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -23,6 +15,14 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.subsystems.swerve.SwerveDriveSubsystem;
 import frc.robot.util.Util;
+
+import static frc.robot.commands.swerve.SwerveTargetingConfig.enableLogging;
+import static frc.robot.commands.swerve.SwerveTargetingConfig.translateMaxAcceleration;
+import static frc.robot.commands.swerve.SwerveTargetingConfig.translateD;
+import static frc.robot.commands.swerve.SwerveTargetingConfig.translateMaxFeedback;
+import static frc.robot.commands.swerve.SwerveTargetingConfig.translateMaxVelocity;
+import static frc.robot.commands.swerve.SwerveTargetingConfig.translateP;
+import static frc.robot.commands.swerve.SwerveTargetingConfig.translateTolerance;
 
 /**
  * This shows how to use a trapezoid motion profile to translate the robot
@@ -91,21 +91,13 @@ public class SwerveTranslateCommand extends Command {
 
         // let's also re-read configuration to create an up-to-date motion profile
         // note that configuration is in inches per second so we convert to meters
-        double maxV = Units.inchesToMeters(translateMaxVelocity.getAsDouble());
-        double maxA = maxV * translateAcceleration.getAsDouble();
-        profile = new TrapezoidProfile(new Constraints(maxV, maxA));
+        profile = new TrapezoidProfile(new Constraints(
+                Units.inchesToMeters(translateMaxVelocity.getAsDouble()),
+                Units.inchesToMeters(translateMaxAcceleration.getAsDouble())));
 
         // always reset the PIDs when you're doing closed loop
-
-        pidX.setP(translateP.getAsDouble());
-        pidX.setD(translateD.getAsDouble());
-        pidX.setTolerance(translateTolerance.getAsDouble());
-        pidX.reset();
-
-        pidY.setP(translateP.getAsDouble());
-        pidY.setD(translateD.getAsDouble());
-        pidY.setTolerance(translateTolerance.getAsDouble());
-        pidY.reset();
+        Util.resetPid(pidX, translateP, translateD, translateTolerance);
+        Util.resetPid(pidY, translateP, translateD, translateTolerance);
 
         Util.log("[swerve-pose] headed to %s", finalPose);
 

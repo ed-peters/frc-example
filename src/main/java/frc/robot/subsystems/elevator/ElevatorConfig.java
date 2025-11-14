@@ -31,11 +31,10 @@ public class ElevatorConfig {
     public static final DoubleSupplier maxVelocity = pref("ElevatorSubsystem/MaxVelocity", 120.0);
 
     /**
-     * Acceleration factor for moving between presets (multiplied by the max
-     * velocity to get acceleration; 2.0 means it takes 0.5s to reach top
-     * speed)
+     * Maximum acceleration moving between presets; as an example when the
+     * acceleration is twice the velocity, it will take 0.5s to reach top speed
      */
-    public static final DoubleSupplier accelerationFactor = pref("ElevatorSubsystem/Acceleration", 2.0);
+    public static final DoubleSupplier maxAcceleration = pref("ElevatorSubsystem/MaxAcceleration", 240.0);
 
     /**
      * Maximum voltage in teleop for moving elevator; see
@@ -55,7 +54,8 @@ public class ElevatorConfig {
     /**
      * Maximum feedback from feedback; you will probably want to keep this
      * to low single digits. If it's too high, you could wind up with a
-     * "mousetrap" effect if the
+     * huge power spike if the target height is too far away from the
+     * current height.
      */
     public static final DoubleSupplier maxFeedback = pref("ElevatorSubsystem/MaxFeedback", 2.0);
 

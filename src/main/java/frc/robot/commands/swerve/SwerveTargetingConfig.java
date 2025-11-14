@@ -33,7 +33,7 @@ public class SwerveTargetingConfig {
     public static DoubleSupplier translateD = pref("SwerveTranslate/D", 0.0);
     public static DoubleSupplier translateMaxFeedback = pref("SwerveTranslate/MaxFeedback", 10.0);
     public static DoubleSupplier translateMaxVelocity = pref("SwerveTranslate/MaxVelocity", 48.0);
-    public static DoubleSupplier translateAcceleration = pref("SwerveTranslate/Acceleration", 2.0);
+    public static DoubleSupplier translateMaxAcceleration = pref("SwerveTranslate/MaxAcceleration", 96.0);
     public static DoubleSupplier translateTolerance = pref("SwerveTranslate/Tolerance", 2.0);
 
 }

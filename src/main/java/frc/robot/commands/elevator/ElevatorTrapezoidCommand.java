@@ -10,7 +10,7 @@ import frc.robot.util.Util;
 
 import java.util.function.DoubleSupplier;
 
-import static frc.robot.subsystems.elevator.ElevatorConfig.accelerationFactor;
+import static frc.robot.subsystems.elevator.ElevatorConfig.maxAcceleration;
 import static frc.robot.subsystems.elevator.ElevatorConfig.maxVelocity;
 
 /**
@@ -59,9 +59,9 @@ public class ElevatorTrapezoidCommand extends Command {
         Util.log("[elevator] moving to %s @ %.2f", name, finalState.position);
 
         // calculate a fresh motion profile based on latest configuration
-        double maxV = maxVelocity.getAsDouble();
-        double maxA = maxV * accelerationFactor.getAsDouble();
-        profile = new TrapezoidProfile(new Constraints(maxV, maxA));
+        profile = new TrapezoidProfile(new Constraints(
+                maxVelocity.getAsDouble(),
+                maxAcceleration.getAsDouble()));
 
         elevator.resetPid();
         timer.restart();
