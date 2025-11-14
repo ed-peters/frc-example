@@ -6,7 +6,7 @@ import java.util.function.DoubleSupplier;
 import static frc.robot.util.Util.pref;
 
 /**
- * Configuration properties for swerve teleop.
+ * Configuration properties for swerve teleop
  */
 public class SwerveTeleopConfig {
 

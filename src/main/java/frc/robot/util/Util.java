@@ -52,6 +52,9 @@ public class Util {
     /** State with all zeros */
     public static final State ZERO_STATE = new State();
 
+    /** State with no values */
+    public static final State NAN_STATE = new State(Double.NaN, Double.NaN);
+
     /** Speed with all zeros */
     public static final ChassisSpeeds ZERO_SPEED = new ChassisSpeeds(0.0, 0.0, 0.0);
 
@@ -187,11 +190,24 @@ public class Util {
     }
 
     /**
+     * Fetches a number straight from NetworkTables - this is inefficient
+     * and should only be used for debugging
+     */
+    public static double fetchPreference(String key) {
+        return NetworkTableInstance.getDefault()
+                .getTable("Preferences")
+                .getDoubleTopic(key)
+                .getEntry(-100.0)
+                .getAsDouble();
+    }
+
+    /**
      * @return a {@link BooleanSupplier} providing access to the specified configuration
      * preference (this also has the side effect of saving the value, if it's not already
      * persisted on the robot)
      */
     public static BooleanSupplier pref(String name, boolean defaultValue) {
+        log("[util] registering pref %s = %s", name, defaultValue);
         Preferences.initBoolean(name, defaultValue);
         return () -> Preferences.getBoolean(name, defaultValue);
     }
@@ -202,7 +218,7 @@ public class Util {
      * persisted on the robot)
      */
     public static DoubleSupplier pref(String name, double defaultValue) {
-        System.out.println("registering pref: " + name);
+        log("[util] registering pref %s = %.2f", name, defaultValue);
         Preferences.initDouble(name, defaultValue);
         return () -> Preferences.getDouble(name, defaultValue);
     }

@@ -18,9 +18,9 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
-import frc.robot.commands.swerve.SwerveTranslateCommand;
+import frc.robot.commands.swerve.SwerveAutoRotateCommand;
+import frc.robot.commands.swerve.SwerveAutoTranslateCommand;
 import frc.robot.util.Util;
-import frc.robot.commands.swerve.SwerveRotateCommand;
 import frc.robot.commands.swerve.SwerveTeleopCommand;
 
 import static frc.robot.subsystems.swerve.SwerveConfig.kinematics;
@@ -272,7 +272,7 @@ public class SwerveDriveSubsystem extends SubsystemBase {
 
         // we'll use a proxy command so it picks up the latest tuning
         // properties every time it runs
-        return Commands.deferredProxy(() -> new SwerveRotateCommand(this, angle));
+        return Commands.deferredProxy(() -> new SwerveAutoRotateCommand(this, angle));
     }
 
     /** @return a command to drive to a relative offset of the current position */
@@ -280,7 +280,7 @@ public class SwerveDriveSubsystem extends SubsystemBase {
 
         // we'll use a proxy command so it picks up the latest tuning
         // properties every time it runs
-        return Commands.deferredProxy(() -> new SwerveTranslateCommand(this, offset));
+        return Commands.deferredProxy(() -> new SwerveAutoTranslateCommand(this, offset));
     }
 
     /** @return a command to set the pose to 0 */

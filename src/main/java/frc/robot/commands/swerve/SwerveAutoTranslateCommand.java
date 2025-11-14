@@ -16,13 +16,13 @@ import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.subsystems.swerve.SwerveDriveSubsystem;
 import frc.robot.util.Util;
 
-import static frc.robot.commands.swerve.SwerveTargetingConfig.enableLogging;
-import static frc.robot.commands.swerve.SwerveTargetingConfig.translateMaxAcceleration;
-import static frc.robot.commands.swerve.SwerveTargetingConfig.translateD;
-import static frc.robot.commands.swerve.SwerveTargetingConfig.translateMaxFeedback;
-import static frc.robot.commands.swerve.SwerveTargetingConfig.translateMaxVelocity;
-import static frc.robot.commands.swerve.SwerveTargetingConfig.translateP;
-import static frc.robot.commands.swerve.SwerveTargetingConfig.translateTolerance;
+import static frc.robot.commands.swerve.SwerveAutoConfig.enableLogging;
+import static frc.robot.commands.swerve.SwerveAutoConfig.translateMaxAcceleration;
+import static frc.robot.commands.swerve.SwerveAutoConfig.translateD;
+import static frc.robot.commands.swerve.SwerveAutoConfig.translateMaxFeedback;
+import static frc.robot.commands.swerve.SwerveAutoConfig.translateMaxVelocity;
+import static frc.robot.commands.swerve.SwerveAutoConfig.translateP;
+import static frc.robot.commands.swerve.SwerveAutoConfig.translateTolerance;
 
 /**
  * This shows how to use a trapezoid motion profile to translate the robot
@@ -34,7 +34,7 @@ import static frc.robot.commands.swerve.SwerveTargetingConfig.translateTolerance
  * calculations are done in meters because that's what WPILib uses. So pay
  * attention to where the unit conversions are done.</p>
  */
-public class SwerveTranslateCommand extends Command {
+public class SwerveAutoTranslateCommand extends Command {
 
     final SwerveDriveSubsystem drive;
     final Translation2d offset;
@@ -55,7 +55,7 @@ public class SwerveTranslateCommand extends Command {
     double nextX;
     double nextY;
 
-    public SwerveTranslateCommand(SwerveDriveSubsystem drive, Translation2d offset) {
+    public SwerveAutoTranslateCommand(SwerveDriveSubsystem drive, Translation2d offset) {
 
         this.drive = drive;
         this.offset = offset;
@@ -89,11 +89,12 @@ public class SwerveTranslateCommand extends Command {
         startPose = drive.getFusedPose();
         finalPose = startPose.plus(new Transform2d(cos * distance, sin * distance, angle));
 
-        // let's also re-read configuration to create an up-to-date motion profile
-        // note that configuration is in inches per second so we convert to meters
+        // let's also re-read configuration to create an up-to-date motion
+        // profile note that configuration is in feet per second so we
+        // convert to meters
         profile = new TrapezoidProfile(new Constraints(
-                Units.inchesToMeters(translateMaxVelocity.getAsDouble()),
-                Units.inchesToMeters(translateMaxAcceleration.getAsDouble())));
+                Units.feetToMeters(translateMaxVelocity.getAsDouble()),
+                Units.feetToMeters(translateMaxAcceleration.getAsDouble())));
 
         // always reset the PIDs when you're doing closed loop
         Util.resetPid(pidX, translateP, translateD, translateTolerance);
@@ -140,13 +141,13 @@ public class SwerveTranslateCommand extends Command {
         // them all under different names, we'll just have whichever one
         // is running publish the "latest" information for debugging
         if (enableLogging) {
-            SmartDashboard.putNumber("SwerveTargetPoseOffsetCommand/Distance", distance);
-            SmartDashboard.putNumber("SwerveTargetPoseOffsetCommand/Angle", angle.getDegrees());
-            SmartDashboard.putNumber("SwerveTargetPoseOffsetCommand/SpeedX", nextSpeedX);
-            SmartDashboard.putNumber("SwerveTargetPoseOffsetCommand/SpeedY", nextSpeedY);
-            SmartDashboard.putNumber("SwerveTargetPoseOffsetCommand/ErrorX", pidX.getError());
-            SmartDashboard.putNumber("SwerveTargetPoseOffsetCommand/ErrorY", pidY.getError());
-            SmartDashboard.putBoolean("SwerveTargetPoseOffsetCommand/Running?", true);
+            SmartDashboard.putNumber("SwerveAutoTranslateCommand/Distance", distance);
+            SmartDashboard.putNumber("SwerveAutoTranslateCommand/Angle", angle.getDegrees());
+            SmartDashboard.putNumber("SwerveAutoTranslateCommand/SpeedX", nextSpeedX);
+            SmartDashboard.putNumber("SwerveAutoTranslateCommand/SpeedY", nextSpeedY);
+            SmartDashboard.putNumber("SwerveAutoTranslateCommand/ErrorX", pidX.getError());
+            SmartDashboard.putNumber("SwerveAutoTranslateCommand/ErrorY", pidY.getError());
+            SmartDashboard.putString("SwerveAutoTranslateCommand/Status", "running");
         }
     }
 
@@ -162,19 +163,22 @@ public class SwerveTranslateCommand extends Command {
     @Override
     public void end(boolean interrupted) {
 
-        // if tuning isn't correct we may not reach the target position (we
-        // might overshoot or undershoot). if you see this warning in the
-        // logs a lot, you should probably redo your tuning
         double distanceToTarget = drive
                 .getFusedPose()
                 .getTranslation()
                 .getDistance(finalPose.getTranslation());
 
+        // this command runs until the calculated profile time has elapsed;
+        // if tuning isn't correct, or an obstacle gets in our way, we may
+        // not reach the target position
+
         // wpilib calculates distance in meters so we convert to inches
         // for comparing with the threshold
-        distanceToTarget = Units.inchesToMeters(distanceToTarget);
+        boolean success = Units.inchesToMeters(distanceToTarget) < translateTolerance.getAsDouble();
 
-        if (distanceToTarget > translateTolerance.getAsDouble()) {
+        // always log failure; if you see this in logs a log it might
+        // suggest the need to re-tune
+        if (!success) {
             Util.log("[swerve-pose] !!! MISSED goal %s by %.2f !!!", finalPose, distanceToTarget);
         }
 
@@ -182,11 +186,12 @@ public class SwerveTranslateCommand extends Command {
         nextSpeedY = Double.NaN;
         nextX = Double.NaN;
         nextY = Double.NaN;
-
         timer.stop();
 
         if (enableLogging) {
-            SmartDashboard.putBoolean("SwerveTargetPoseOffsetCommand/Running?", false);
+            SmartDashboard.putString("SwerveAutoTranslateCommand/Running?", success
+                    ? "succeeded"
+                    : "failed");
         }
     }
 }

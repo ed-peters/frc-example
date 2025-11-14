@@ -5,8 +5,8 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.DeferredCommand;
-import frc.robot.commands.swerve.SwerveRotateCommand;
-import frc.robot.commands.swerve.SwerveTranslateCommand;
+import frc.robot.commands.swerve.SwerveAutoRotateCommand;
+import frc.robot.commands.swerve.SwerveAutoTranslateCommand;
 import frc.robot.subsystems.vision.LimelightSubsystem;
 import frc.robot.subsystems.vision.LimelightTarget;
 import frc.robot.util.Util;
@@ -54,7 +54,7 @@ public class ThreeStageTargetingCommand extends DeferredCommand {
 
             // we are going to rotate to face the id; this means our heading
             // will be 180 degrees off from the id
-            Command rotate = new SwerveRotateCommand(
+            Command rotate = new SwerveAutoRotateCommand(
                     drive,
                     target.pose().getRotation().plus(Rotation2d.k180deg));
 
@@ -71,7 +71,7 @@ public class ThreeStageTargetingCommand extends DeferredCommand {
             }
 
             // translate to the target position
-            Command translate = new SwerveTranslateCommand(drive, translationSupplier.get());
+            Command translate = new SwerveAutoTranslateCommand(drive, translationSupplier.get());
             Util.log("[ll-target] preparing three-stage targeting");
             return rotate
                     .andThen(align)
