@@ -1,6 +1,10 @@
 # Autonomous Subsystem
 
 This is a subsystem for managing the selection of autonomous programs.
+Note that there are a bunch of **TODO** items in the `AutonomousSubsystem`
+class; you will have to configure it based on what your robot is going to
+do.
+
 A few learnings that are embedded here ...
 
 *Don't use the Dashboard in competitions*. WPILib code samples will show you
@@ -13,5 +17,4 @@ pick which program to run. The code in here uses the `DashboardPicker` during si
 
 *Don't load all your available routines at once*. We used to create a 
 `Command` object for each available routine, and then pick which one to use at the beginning of autonomous. This works OK if you have just a few programs but creating those things take a fair amount of time. When we got up to >3 programs, it can slow down the startup time of the robot a lot. The on-field operator will get yelled at by the judges to hurry up and it's awkward. So this code waits to create the actual `Command` until it's needed.
-
 
