@@ -2,9 +2,7 @@ package frc.robot.subsystems.auto;
 
 import frc.robot.util.DigitBoard;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import java.util.Map;
 import java.util.function.Supplier;
 
 /**
@@ -14,21 +12,19 @@ import java.util.function.Supplier;
  */
 public class DigitBoardPicker implements Supplier<String> {
 
-    final List<String> options;
+    final Map<String,String> options;
+    final String [] shortNames;
     final DigitBoard board;
-    boolean aWasPressed;
-    boolean bWasPressed;
     int which;
 
     /**
      * @param options a list of options (only the first four characters
      *                of each will be displayed, so they should be short)
      */
-    public DigitBoardPicker(Collection<String> options) {
+    public DigitBoardPicker(Map<String,String> options) {
         this.board = new DigitBoard();
-        this.options = new ArrayList<>(options);
-        this.aWasPressed = false;
-        this.bWasPressed = false;
+        this.options = options;
+        this.shortNames = options.keySet().toArray(new String[0]);
         this.which = 0;
     }
 
@@ -39,28 +35,37 @@ public class DigitBoardPicker implements Supplier<String> {
     @Override
     public String get() {
 
-        boolean aIsPressed = board.getButtonA();
-        if (aIsPressed && !aWasPressed) {
+        // if we have no options available, there's nothing to do
+        if (options.isEmpty()) {
+            board.display("????");
+            return null;
+        }
+
+        // this logic will increase or decrease the "which" counter by 1
+        // when someone presses and releases the A or B button, which lets
+        // them scroll through the program options
+
+        if (board.wasButtonBReleased()) {
+            // if they want to go "forwards" past the end of the list, the
+            // mod operator will "wrap around" back to the front (item 0)
+            which = (which + 1) % options.size();
+        }
+
+        if (board.isButtonAPressed()) {
             which = which - 1;
+
+            // if they want to go "backwards" past the beginning of the
+            // the list, we "wrap around" to the end (item N-1)
             if (which < 0) {
                 which = options.size() - 1;
             }
         }
-        aWasPressed = aIsPressed;
 
-        boolean bIsPressed = board.getButtonB();
-        if (bIsPressed && !bWasPressed) {
-            which = (which + 1) % options.size();
-        }
-        bWasPressed = bIsPressed;
+        // display the short version of the name on the board
+        String shortName = shortNames[which];
+        board.display(shortName);
 
-        if (options.isEmpty()) {
-            board.display("????");
-            return null;
-        } else {
-            String name = options.get(which);
-            board.display(name);
-            return name;
-        }
+        // look up the longer version and return it
+        return options.get(shortName);
     }
 }

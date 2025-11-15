@@ -19,6 +19,7 @@ import edu.wpi.first.wpilibj.Preferences;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 
@@ -62,7 +63,7 @@ public class Util {
     public static final ChassisSpeeds NAN_SPEED = new ChassisSpeeds(Double.NaN, Double.NaN, Double.NaN);
 
     // ===========================================================
-    // MATH STUFF
+    // MISC STUFF
     // ===========================================================
 
     /**
@@ -87,9 +88,22 @@ public class Util {
         return MathUtil.inputModulus(degrees, -180.0, 180.0);
     }
 
-    // ===========================================================
-    // PIDs & PROFILES
-    // ===========================================================
+    /**
+     * @return a new supplier that returns true when the original supplier
+     * (a) returned true last time and (b) returns false this time (this
+     * captures a "falling edge", for example when a button was pressed and
+     * then gets released)
+     */
+    public static BooleanSupplier fallingEdge(BooleanSupplier supplier) {
+        AtomicBoolean wasTrue = new AtomicBoolean(false);
+        return () -> {
+            boolean isTrue = supplier.getAsBoolean();
+            boolean hasFallen = wasTrue.get() && !isTrue;
+            wasTrue.set(isTrue);
+            return hasFallen;
+        };
+    }
+
 
     /**
      * Resets a PID controller to use the most recent tuning constants

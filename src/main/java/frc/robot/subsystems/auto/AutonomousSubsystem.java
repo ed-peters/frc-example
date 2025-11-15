@@ -16,7 +16,9 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.subsystems.swerve.SwerveDriveSubsystem;
 import frc.robot.util.Util;
+import org.json.simple.parser.ParseException;
 
+import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.BiConsumer;
@@ -49,30 +51,27 @@ public class AutonomousSubsystem extends SubsystemBase {
     final Supplier<String> programPicker;
     String selected;
     Command command;
+    boolean error;
 
     public AutonomousSubsystem(SwerveDriveSubsystem drive) {
 
         this.drive = drive;
 
-        // in 2025 we loaded all the different programs up front. this
-        // got slower and slower as we added more complicated options.
-        // eventually the operator would have to stand on the field
-        // waiting for a minute or more before they could make their
-        // program selection. they got yelled at a lot.
-
-        // don't let this happen to you! only create the picker of
-        // names here; wait to load the command until the game is
-        // getting underway.
+        // we decide which type of picker to use depending on whether
+        // we're in simulation or not; either way, our picker will
+        // return the long name of the currently-selected program
 
         this.programPicker = RobotBase.isSimulation()
-                ? new DashboardPicker("AutonomousProgram", programs.keySet())
-                : new DigitBoardPicker(programs.keySet());
+                ? new DashboardPicker("AutonomousProgram", programs)
+                : new DigitBoardPicker(programs);
 
         this.selected = programPicker.get();
+        this.error = false;
 
         SmartDashboard.putData(getName(), builder -> {
             builder.addStringProperty("Program", () -> selected, null);
             builder.addBooleanProperty("Running?", () -> command != null && command.isScheduled(), null);
+            builder.addBooleanProperty("Error?", () -> error, null);
         });
     }
 
@@ -88,19 +87,38 @@ public class AutonomousSubsystem extends SubsystemBase {
             return Commands.none();
         }
 
-        registerNamedCommands();
-        configureAutoBuilder();
+        // there's a lot happening under the covers here, and PathPlanner
+        // might generate an error if there's a problem with config files,
+        // or calculating a path, or something like that.
 
-        Util.log("[auto] loading program %s", selected);
+        // we don't want the entire robot to crash if there's a problem
+        // with autonomous, so we wrap this whole thing with an exception
+        // handler. if there is an error, we will log it and the robot
+        // will just sit still during autonomous.
 
-        // this loads the actual program description and links it
-        // up with all the other configurations
-        command = new PathPlannerAuto(programs.get(selected));
+        // TODO how should we set the starting position if an error happens?
 
-        // in years past we might mess with the program once it was
-        // loaded - for instance, prepending some initialization code
-        // or adding some timeouts or other such hackery
-        
+        try {
+
+            registerNamedCommands();
+            configureAutoBuilder();
+
+            Util.log("[auto] loading program %s", selected);
+
+            // this loads the actual program description and links it
+            // up with all the other configurations
+            command = new PathPlannerAuto(selected);
+
+            // in years past we might mess with the program once it was
+            // loaded - for instance, prepending some initialization code
+            // or adding some timeouts or other such hackery
+
+        } catch (Exception e) {
+            Util.log("[auto] ERROR LOADING PROGRAM!!!");
+            e.printStackTrace();
+            command = Commands.none();
+        }
+
         return command;
     }
 
@@ -126,18 +144,12 @@ public class AutonomousSubsystem extends SubsystemBase {
     /**
      * Configure PathPlanner's command builder
      */
-    private void configureAutoBuilder() {
+    private void configureAutoBuilder() throws IOException, ParseException {
 
         // this loads the settings for the robot, which you edited and
         // saved through the GUI
-        RobotConfig config = null;
-        try {
-            Util.log("[auto] loading robot configuration");
-            config = RobotConfig.fromGUISettings();
-        } catch (Exception e) {
-            e.printStackTrace();
-            return;
-        }
+        Util.log("[auto] loading robot configuration");
+        RobotConfig config = RobotConfig.fromGUISettings();
 
         // this is what accepts calculated speeds from the path engine
         // and actually applies them to drive the robot around; if the

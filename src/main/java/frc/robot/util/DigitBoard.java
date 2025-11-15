@@ -120,6 +120,8 @@ public class DigitBoard {
     private final DigitalInput buttonB;
     private final AnalogInput pot;
     private final byte [] buffer;
+    private boolean aWasPressed;
+    private boolean bWasPressed;
 
     public DigitBoard() {
         this.buffer = new byte[10];
@@ -130,18 +132,61 @@ public class DigitBoard {
         this.pot.setAverageBits(10);
     }
 
-    public boolean getButtonA() {
+    /**
+     * @return true if button A is currently being pressed
+     */
+    public boolean isButtonAPressed() {
         return !buttonA.get();
     }
 
-    public boolean getButtonB() {
+    /**
+     * @return true if button A was pressed the last time this was called,
+     * and is no longer being pressed now (this is just like the logic for
+     * {@link edu.wpi.first.wpilibj.XboxController#getRawButtonReleased(int)}
+     */
+    public boolean wasButtonAReleased() {
+        boolean isPressed = isButtonAPressed();
+        boolean wasReleased = isPressed && !aWasPressed;
+        aWasPressed = isPressed;
+        return wasReleased;
+    }
+
+    /**
+     * @return true if button B is currently being pressed
+     */
+    public boolean isButtonBPressed() {
         return !buttonB.get();
     }
 
-    public int getValue() {
-        return pot.getAverageValue() - 187;
+    /**
+     * @return true if button B was pressed the last time this was called,
+     * and is no longer being pressed now (this is just like the logic for
+     * {@link edu.wpi.first.wpilibj.XboxController#getRawButtonReleased(int)}
+     */
+    public boolean wasButtonBReleased() {
+        boolean isPressed = isButtonBPressed();
+        boolean wasReleased = isPressed && !bWasPressed;
+        bWasPressed = isPressed;
+        return wasReleased;
     }
 
+    /**
+     * @return the value of the potentiometer
+     */
+    public int getValue() {
+
+        // we found that the actual value being returned is in a weird
+        // range that seemed to vary from week to week. use at your own
+        // peril
+
+        return pot.getAverageValue();
+    }
+
+    /**
+     * Writes the first 4 characters of the supplied string to the
+     * display (the string will be right-padded with spaces if it's
+     * not long enough)
+     */
     public void display(String output) {
         writeToBuffer(output+"      ");
         i2c.writeBulk(OSC);
@@ -150,6 +195,9 @@ public class DigitBoard {
         i2c.writeBulk(buffer);
     }
 
+    /*
+     * Logic for writing to the buffer
+     */
     private void writeToBuffer(String output)
     {
         buffer[0] = (byte)(0b0000111100001111);
