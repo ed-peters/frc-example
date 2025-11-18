@@ -23,6 +23,10 @@ import frc.robot.commands.swerve.SwerveAutoTranslateCommand;
 import frc.robot.util.Util;
 import frc.robot.commands.swerve.SwerveTeleopCommand;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
+
 import static frc.robot.subsystems.swerve.SwerveConfig.kinematics;
 import static frc.robot.subsystems.swerve.SwerveConfig.maximumWheelSpeed;
 
@@ -42,8 +46,9 @@ public class SwerveDriveSubsystem extends SubsystemBase {
     }
 
     final SwerveChassis chassis;
-    final SwerveDriveOdometry odometry;
-    final SwerveDrivePoseEstimator estimator;
+    final List<Consumer<Pose2d>> poseListeners;
+    SwerveDriveOdometry odometry;
+    SwerveDrivePoseEstimator estimator;
     Pose2d lastVisionPose;
     Pose2d lastOdometryPose;
     Pose2d lastFusedPose;
@@ -54,9 +59,8 @@ public class SwerveDriveSubsystem extends SubsystemBase {
 
     public SwerveDriveSubsystem(SwerveChassis chassis) {
 
-        this.currentCommand = "";
-        this.currentHeading = chassis.getHeading();
         this.chassis = chassis;
+        this.poseListeners = new ArrayList<>();
         this.odometry = new SwerveDriveOdometry(
                 kinematics,
                 chassis.getHeading(),
@@ -66,6 +70,8 @@ public class SwerveDriveSubsystem extends SubsystemBase {
                 chassis.getHeading(),
                 chassis.getModulePositions(),
                 Util.ZERO_POSE);
+        this.currentCommand = "";
+        this.currentHeading = chassis.getHeading();
         this.lastVisionPose = Util.NAN_POSE;
         this.lastOdometryPose = Util.ZERO_POSE;
         this.lastFusedPose = Util.ZERO_POSE;
@@ -94,7 +100,7 @@ public class SwerveDriveSubsystem extends SubsystemBase {
 
     /** @return current speeds */
     public ChassisSpeeds getCurrentSpeed() {
-        throw new UnsupportedOperationException();
+        return chassis.getCurrentSpeed();
     }
 
     /** @return kinematics for the drive */
@@ -155,13 +161,38 @@ public class SwerveDriveSubsystem extends SubsystemBase {
     }
 
     /**
-     * Reset the pose of the robot to the specified value
+     * Adds a listener that gets called whenever the robot's pose gets
+     * reset (for instance, at the beginning of auto)
+     */
+    public void addPoseListener(Consumer<Pose2d> listener) {
+        poseListeners.add(listener);
+    }
+
+    /**
+     * Reset the pose of the robot to the specified value. This will also
+     * notify anything listening to
      */
     public void resetPose(Pose2d pose) {
-        Util.log("[swerve] resetting pose to %s", pose);
-        odometry.resetPose(pose);
-        estimator.resetPose(pose);
+
         chassis.resetHeading(pose.getRotation());
+        
+        odometry.resetPosition(
+            chassis.getHeading(),
+            chassis.getModulePositions(),
+            pose);
+
+        estimator.resetPosition(
+            chassis.getHeading(),
+            chassis.getModulePositions(),
+            pose);
+
+        for (Consumer<Pose2d> listener : poseListeners) {
+            listener.accept(pose);
+        }
+
+        Util.log("[swerve] reset pose to %s and notified %d listeners",
+                pose,
+                poseListeners.size());
     }
 
     /**

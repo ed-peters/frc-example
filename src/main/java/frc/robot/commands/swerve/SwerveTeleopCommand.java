@@ -92,8 +92,8 @@ public class SwerveTeleopCommand extends Command {
         }
 
         // if they're red, they are actually looking at the field from
-        // the opposite side (so going away from them is -Y on the
-        // field)
+        // the opposite side (so going away from them is -X on the
+        // field, and to their left is -Y)
         else {
             fieldRelativeSpeeds= new ChassisSpeeds(
                     -incomingSpeeds.vxMetersPerSecond,

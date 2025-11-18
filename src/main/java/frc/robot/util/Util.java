@@ -15,6 +15,7 @@ import edu.wpi.first.networktables.StructPublisher;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Preferences;
+import edu.wpi.first.wpilibj.RobotBase;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -141,9 +142,26 @@ public class Util {
         return pose.map(Pose3d::toPose2d).orElse(null);
     }
 
-    /** @return true if the driver's station says we're blue alliance */
+    /**
+     * @return true if we are on the red alliance (if we're simulating we
+     * have to fetch that from the dashboard; otherwise we'll talk to the
+     * driver station)
+     */
+    public static boolean isRedAlliance() {
+        if (RobotBase.isSimulation()) {
+            return NetworkTableInstance.getDefault()
+                    .getTable("FMSInfo")
+                    .getBooleanTopic("IsRedAlliance")
+                    .getEntry(false)
+                    .get();
+        } else {
+            return DriverStation.getAlliance().orElse(Alliance.Red) == Alliance.Red;
+        }
+    }
+
+    /** @return opposite of {@link #isRedAlliance()} */
     public static boolean isBlueAlliance() {
-        return DriverStation.getAlliance().orElse(Alliance.Red) == Alliance.Blue;
+        return !isRedAlliance();
     }
 
     /**

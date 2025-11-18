@@ -1,6 +1,8 @@
 package frc.robot.subsystems.vision;
 
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.subsystems.swerve.SwerveDriveSubsystem;
@@ -211,5 +213,27 @@ public class LimelightSubsystem extends SubsystemBase {
                 estimate.pose,
                 estimate.timestampSeconds,
                 confidenceMegaTag2);
+    }
+
+    /**
+     * The Limelight docs lie, and the target pose is returned with the
+     * axes wrong. It actually comes back in "camera space" (+Z is straight
+     * ahead, +X is right and +Y is down)
+     */
+    private Pose2d getCorrectedTargetPoseInRobotSpace() {
+
+        Pose3d tagPose3 = LimelightHelpers.getTargetPose3d_RobotSpace("limelight");
+
+        // if it doesn't have a tag it will pretend there's one at (0,0,0);
+        // let's try to ignore that if possible
+        if (tagPose3.getTranslation().getNorm() == 0.0) {
+            return null;
+        }
+
+        // change the coordinate systems for the lying liars
+        return new Pose2d(
+                tagPose3.getZ(),
+                -tagPose3.getX(),
+                Rotation2d.fromRadians(tagPose3.getRotation().getY()));
     }
 }

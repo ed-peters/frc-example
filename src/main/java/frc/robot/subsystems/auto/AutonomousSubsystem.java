@@ -38,6 +38,10 @@ public class AutonomousSubsystem extends SubsystemBase {
     Command command;
     boolean error;
 
+    // ==========================================================
+    // INITIALIZATION
+    // ==========================================================
+
     public AutonomousSubsystem(SwerveDriveSubsystem drive) {
 
         this.drive = drive;
@@ -51,31 +55,6 @@ public class AutonomousSubsystem extends SubsystemBase {
                 : new DigitBoardPicker(getProgramNames());
 
         this.selected = programPicker.get();
-        this.error = false;
-
-        SmartDashboard.putData(getName(), builder -> {
-            builder.addStringProperty("Program", () -> selected, null);
-            builder.addBooleanProperty("Running?", () -> command != null && command.isScheduled(), null);
-            builder.addBooleanProperty("Error?", () -> error, null);
-        });
-    }
-
-    // ==========================================================
-    // STANDARD STUFF
-    // ==========================================================
-
-    /**
-     * Call this from {@link TimedRobot#autonomousInit()} to create the
-     * actual command. You should do all the work of loading the program
-     * and configuring PathPlanner here, so the field operator doesn't
-     * have to wait for it to happen.
-     */
-    public Command generateCommand() {
-
-        if (selected == null) {
-            Util.log("[auto] NO SELECTED PROGRAM!!!");
-            return Commands.none();
-        }
 
         // there's a lot happening under the covers here, and PathPlanner
         // might generate an error if there's a problem with config files,
@@ -83,37 +62,21 @@ public class AutonomousSubsystem extends SubsystemBase {
 
         // we don't want the entire robot to crash if there's a problem
         // with autonomous, so we wrap this whole thing with an exception
-        // handler. if there is an error, we will log it and the robot
-        // will just sit still during autonomous.
+        // handler. if there is an error, we will log it and then use our
+        // emergency backup configuration
 
         try {
-
-            registerNamedCommands();
             configureAutoBuilder();
-
-            Util.log("[auto] loading program %s", selected);
-
-            // this loads the actual program description and links it
-            // up with all the other configurations
-            command = new PathPlannerAuto(selected);
-
-            // in years past we might mess with the program once it was
-            // loaded - for instance, prepending some initialization code
-            // or adding some timeouts or other such hackery
-            command = decorateAutoCommand(command);
-
+            this.error = false;
         } catch (Exception e) {
-
-            // this handles logging
-            Util.log("[auto] ERROR LOADING PROGRAM!!!");
-            e.printStackTrace();
-
-            // this sets the "emergency start pose" and program
-            drive.resetPose(createEmergencyStartPose());
-            command = createEmergencyCommand();
+            this.error = true;
         }
 
-        return command;
+        SmartDashboard.putData(getName(), builder -> {
+            builder.addStringProperty("Program", () -> selected, null);
+            builder.addBooleanProperty("Running?", () -> command != null && command.isScheduled(), null);
+            builder.addBooleanProperty("Error?", () -> error, null);
+        });
     }
 
     /**
@@ -151,13 +114,55 @@ public class AutonomousSubsystem extends SubsystemBase {
                 output,
                 controller,
                 config,
-                () -> !Util.isBlueAlliance(),
+
+                // PP plans are drawn from the perspective of the blue team;
+                // if we are the red team, PP should flip the path for us
+                Util::isRedAlliance,
+
                 this);
     }
+
+    // ==========================================================
+    // COMMAND GENERATION
+    // ==========================================================
 
     @Override
     public void periodic() {
         selected = programPicker.get();
+    }
+
+    /**
+     * Call this from {@link TimedRobot#autonomousInit()} to create the
+     * actual command. You should do all the work of loading the program
+     * and configuring PathPlanner here, so the field operator doesn't
+     * have to wait for it to happen.
+     */
+    public Command generateCommand() {
+
+        if (selected == null) {
+            Util.log("[auto] NO SELECTED PROGRAM!!!");
+            return Commands.none();
+        }
+
+        // if initialization failed, we will use our emergency backup
+        // command instead of trying to do a full routine
+        if (error) {
+            command = createEmergencyCommand();
+        }
+
+        else {
+
+            // this loads the actual program description and links it
+            // up with all the other configurations
+            command = new PathPlannerAuto(selected);
+
+            // in years past we might mess with the program once it was
+            // loaded - for instance, prepending some initialization code
+            // or adding some timeouts or other such hackery
+            command = decorateAutoCommand(command);
+        }
+
+        return command;
     }
 
     // ==========================================================
@@ -212,16 +217,19 @@ public class AutonomousSubsystem extends SubsystemBase {
      * stuff to the beginning or end.
      */
     private Command decorateAutoCommand(Command autoCommand) {
-        Command before = Commands.print("[auto] starting auto");
-        Command after = Commands.print("[auto] ending auto");
-        return before.andThen(autoCommand).andThen(after);
+        Command printAlliance = Commands.runOnce(() -> {
+            String alliance = Util.isRedAlliance() ? "RED" : "BLUE";
+            Util.log("[auto] starting auto as %s alliance", alliance);
+        });
+        Command logComplete = Commands.print("[auto] done with auto");
+        return printAlliance.andThen(autoCommand).andThen(logComplete);
     }
 
     /*
      * TODO create an emergency auto program
      *
      * If the autonomous routine gets buggered up, what do you want the
-     * robot to do? Sitting still might be one option, but you might also
+     * robot to do? Sitting still might be one option, but you mightz also
      * have some of that "mandatory" stuff to do. Or you might want to try
      * some minimal driving to score points.
      */
@@ -240,9 +248,9 @@ public class AutonomousSubsystem extends SubsystemBase {
      */
     private Pose2d createEmergencyStartPose() {
 
-        // this assumes we always start facing away from whichever driver
-        // station we're at
-        return Util.isBlueAlliance()
+        // example: assume the robot starts facing away from
+        // the alliance wall (blue is 0, red is 180)
+        return Util.isRedAlliance()
                 ? new Pose2d(0.0, 0.0, Rotation2d.k180deg)
                 : Util.ZERO_POSE;
     }

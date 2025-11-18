@@ -37,6 +37,18 @@ public class SwerveChassisSim implements SwerveChassis {
     }
 
     @Override
+    public ChassisSpeeds getCurrentSpeed() {        
+        SwerveModuleState [] states = new SwerveModuleState[4];
+        for (int i=0; i<4; i++) {
+            // record current velocity and angle
+            states[i] = new SwerveModuleState(
+                velocity[i],
+                Rotation2d.fromRadians(angle[i]));
+        }
+        return kinematics.toChassisSpeeds(states);
+    }
+
+    @Override
     public double getYawRate() {
         return yawRate;
     }

@@ -1,6 +1,7 @@
 package frc.robot.subsystems.swerve;
 
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 
@@ -15,6 +16,9 @@ public interface SwerveChassis {
 
     /** @return the current robot heading */
     Rotation2d getHeading();
+
+    /** @return the current robot speed */
+    ChassisSpeeds getCurrentSpeed();
 
     /** @return the rate of change of the heading (in degrees per second) */
     double getYawRate();
