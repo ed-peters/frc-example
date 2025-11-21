@@ -7,7 +7,6 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.subsystems.auto.AutonomousSubsystem;
 import frc.robot.subsystems.swerve.SwerveChassisSim;
 import frc.robot.subsystems.swerve.SwerveDriveSubsystem;
-import frc.robot.util.Util;
 
 public class AutoSimRobot extends TimedRobot {
 

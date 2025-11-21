@@ -6,7 +6,6 @@ package frc.robot;
 
 import edu.wpi.first.wpilibj.RobotBase;
 import frc.robot.testbots.AutoSimRobot;
-import frc.robot.testbots.SwerveSimRobot;
 
 public final class Main {
   private Main() {}
