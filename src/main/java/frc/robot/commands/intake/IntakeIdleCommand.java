@@ -4,6 +4,9 @@ import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.subsystems.intake.IntakeSubsystem;
 import frc.robot.util.Util;
 
+/**
+ * Applies 0 volts so the intake will be idle
+ */
 public class IntakeIdleCommand extends Command {
 
     final IntakeSubsystem intake;

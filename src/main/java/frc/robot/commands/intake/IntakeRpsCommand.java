@@ -6,6 +6,9 @@ import frc.robot.util.Util;
 
 import java.util.function.DoubleSupplier;
 
+/**
+ * Run the intake at a fixed wheel revolution per second
+ */
 public class IntakeRpsCommand extends Command {
 
     final IntakeSubsystem intake;

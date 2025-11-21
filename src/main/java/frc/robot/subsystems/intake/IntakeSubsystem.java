@@ -56,7 +56,7 @@ public class IntakeSubsystem extends SubsystemBase {
     // is really helpful when you're debugging the robot
     String currentCommand;
 
-    double targetRps;
+    double targetWheelRps;
     double lastFeedforward;
     double lastFeedback;
     double lastVolts;
@@ -67,7 +67,7 @@ public class IntakeSubsystem extends SubsystemBase {
         this.sensor = sensor;
         this.pid = new PIDController(p.getAsDouble(), 0.0, d.getAsDouble());
         this.currentCommand = "";
-        this.targetRps = Double.NaN;
+        this.targetWheelRps = Double.NaN;
 
         motor.applyBrake(defaultBrakeEnabled);
 
@@ -77,6 +77,7 @@ public class IntakeSubsystem extends SubsystemBase {
             builder.addDoubleProperty("MotorVelocity", motor::getVelocity, null);
             builder.addDoubleProperty("WheelVelocity", this::getWheelVelocity, null);
             builder.addDoubleProperty("LinearVelocity", this::getLinearVelocity, null);
+            builder.addDoubleProperty("TargetWheelVelocity", () -> targetWheelRps, null);
             builder.addBooleanProperty("AtSetpoint?", pid::atSetpoint, null);
             builder.addBooleanProperty("HasGamepiece?", sensor, null);
             builder.addBooleanProperty("Brake?", motor::isBrakeEnabled, motor::applyBrake);
@@ -101,16 +102,19 @@ public class IntakeSubsystem extends SubsystemBase {
         Util.resetPid(pid, p, d, tolerance);
     }
 
-    /** Runs the subsystem in closed loop mode */
-    public void closedLoop(String command, double rps) {
+    /**
+     * Runs the subsystem in closed loop mode, targeting a specific wheel
+     * velocity in rotations per second
+     */
+    public void closedLoop(String command, double wheelRps) {
 
         // remember the current command and goal
         currentCommand = command;
-        targetRps = rps;
+        targetWheelRps = wheelRps;
 
         // calculate feedforward, feedback and total voltage
-        lastFeedforward = v.getAsDouble() * targetRps;
-        lastFeedback = pid.calculate(getWheelVelocity(), targetRps);
+        lastFeedforward = v.getAsDouble() * targetWheelRps;
+        lastFeedback = pid.calculate(getWheelVelocity(), targetWheelRps);
         lastVolts = Util.clampVolts(lastFeedforward + lastFeedback);
 
         motor.applyVolts(lastVolts);
@@ -123,7 +127,7 @@ public class IntakeSubsystem extends SubsystemBase {
         currentCommand = command;
 
         // in open loop mode, we have no target, feedback or feedforward
-        targetRps = Double.NaN;
+        targetWheelRps = Double.NaN;
         lastFeedforward = Double.NaN;
         lastFeedback = Double.NaN;
         lastVolts = Util.clampVolts(volts);
