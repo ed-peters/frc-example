@@ -8,6 +8,11 @@ import frc.robot.subsystems.auto.AutonomousSubsystem;
 import frc.robot.subsystems.swerve.SwerveChassisSim;
 import frc.robot.subsystems.swerve.SwerveDriveSubsystem;
 
+/**
+ * Implementation of {@link TimedRobot} that can be used to practice
+ * autonomous commands. Whenever autonomous is enabled the auto command
+ * will be generated and executed.
+ */
 public class AutoSimRobot extends TimedRobot {
 
     CommandXboxController controller;

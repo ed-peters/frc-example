@@ -17,6 +17,11 @@ It includes:
   * `frc.robot.commands.intake`
 
 
+* **Intake** - another flywheel based subsystem which uses hardware PID instead of software
+  * `frc.robot.subsystems.shooter`
+  * `frc.robot.commands.shooter`
+
+
 * **Elevator** - a position based subsystem, with support for tuning and driving quickly and smoothly to preset positions using motion profiles
   * `frc.robot.subsystems.elevator`
   * `frc.robot.commands.elevator`
@@ -25,3 +30,7 @@ It includes:
 * **Swerve** - a swerve subsystem with commands for teleop mode (with a bunch of options we use every year) and various automatic targeting actions
   * `frc.robot.subsystems.swerve`
   * `frc.robot.commands.swerve`
+
+
+* **Auto** - an autonomous "subsystem" which shows how we pick and generate routines with a dedicated hardware component
+  * `frc.robot.subsystems.auto`

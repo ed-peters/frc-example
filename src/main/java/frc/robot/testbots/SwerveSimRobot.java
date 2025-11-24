@@ -15,6 +15,12 @@ import frc.robot.subsystems.vision.LimelightSim;
 import frc.robot.subsystems.vision.LimelightSubsystem;
 import frc.robot.commands.vision.ThreeStageTargetingCommand;
 
+/**
+ * Implementation of {@link TimedRobot} that can be used to test
+ * swerve drive functionality in a simulator. This is hella useful
+ * when you need to work through stuff and don't have the actual
+ * robot.
+ */
 public class SwerveSimRobot extends TimedRobot {
 
     SwerveChassisSim sim;
@@ -32,9 +38,15 @@ public class SwerveSimRobot extends TimedRobot {
         controller = new CommandXboxController(0);
 
         drive.setDefaultCommand(drive.teleopCommand(controller));
+
+        // test orienting the chassis to a specific heading
         controller.a().onTrue(drive.alignToWallCommand(Direction.NORTH));
         controller.b().onTrue(drive.alignToWallCommand(Direction.EAST));
+
+        // test driving to a fixed offset from current position
         controller.x().onTrue(drive.driveToOffsetCommand(new Translation2d(36.0, 72.0)));
+
+        // test the multi-stage targeting logic
         controller.y().onTrue(new ThreeStageTargetingCommand(drive, limelight, () -> null));
     }
 

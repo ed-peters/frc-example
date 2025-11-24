@@ -216,10 +216,9 @@ public class ElevatorSubsystem extends SubsystemBase {
     /** @return a command that will release the elevator by applying 0 volts */
     public Command releaseCommand() {
 
-        // You don't want this to be the default command unless you're
-        // carefully watching the elevator (for instance, while tuning it),
-        // since it means the elevator will come down quickly from whatever
-        // height it's at
+        // BE CAREFUL with this command - if the mechanism is up high and
+        // you stop applying power to the motor, it will come down
+        // (possibly quickly) and could damage things or people
         return run(() -> openLoop("release", 0.0));
     }
 

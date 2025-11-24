@@ -23,6 +23,6 @@ public class IntakeIdleCommand extends Command {
 
     @Override
     public void execute() {
-        intake.openLoop("release", 0.0);
+        intake.openLoop("idle", 0.0);
     }
 }

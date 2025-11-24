@@ -23,6 +23,6 @@ public class ShooterIdleCommand extends Command {
 
     @Override
     public void execute() {
-        shooter.openLoop("release", 0.0);
+        shooter.openLoop("idle", 0.0);
     }
 }
