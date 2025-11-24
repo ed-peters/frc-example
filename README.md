@@ -5,7 +5,7 @@ This is heavily-commented example code for implementing different common subsyst
 It includes:
 
 * **Utils** - some super-useful utility code that we wind up implementing year after year. See
-  * `frc.robot.util`
+  * [`frc.robot.util`](src/main/java/frc/robot/util)
 
 
 * **Strap** - a very simple subsystem for driving open-loop behavior, with an implementation of "stall detection" that we found useful one year. See
