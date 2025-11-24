@@ -178,6 +178,8 @@ public class SwerveTeleopCommand extends Command {
                 leftY,
                 rightX,
                 turboTrigger,
-                sniperTrigger));
+                sniperTrigger,
+                () -> drive.getPitch().getDegrees(),
+                () -> drive.getRoll().getDegrees()));
     }
 }

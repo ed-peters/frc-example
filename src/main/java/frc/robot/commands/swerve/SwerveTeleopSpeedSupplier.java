@@ -11,6 +11,7 @@ import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
+import static frc.robot.commands.swerve.SwerveTeleopConfig.antiTippingEnabled;
 import static frc.robot.commands.swerve.SwerveTeleopConfig.applySlew;
 import static frc.robot.commands.swerve.SwerveTeleopConfig.applySniperToRotate;
 import static frc.robot.commands.swerve.SwerveTeleopConfig.deadband;
@@ -56,13 +57,16 @@ public class SwerveTeleopSpeedSupplier implements Supplier<ChassisSpeeds> {
         NONE
     }
 
-    DoubleSupplier x;
-    DoubleSupplier y;
-    DoubleSupplier omega;
-    BooleanSupplier turboTrigger;
-    BooleanSupplier sniperTrigger;
+    final DoubleSupplier x;
+    final DoubleSupplier y;
+    final DoubleSupplier omega;
+    final BooleanSupplier turboTrigger;
+    final BooleanSupplier sniperTrigger;
+    final DoubleSupplier pitchSupplier;
+    final DoubleSupplier rollSupplier;
     SlewRateLimiter limiterX;
     SlewRateLimiter limiterY;
+    SwerveTeleopAntiTipper antiTipper;
     double inX;
     double inY;
     double inO;
@@ -74,15 +78,20 @@ public class SwerveTeleopSpeedSupplier implements Supplier<ChassisSpeeds> {
                                      DoubleSupplier y,
                                      DoubleSupplier omega,
                                      BooleanSupplier turboTrigger,
-                                     BooleanSupplier sniperTrigger) {
+                                     BooleanSupplier sniperTrigger,
+                                     DoubleSupplier pitchSupplier,
+                                     DoubleSupplier rollSupplier) {
         this.x = x;
         this.y = y;
         this.omega = omega;
         this.turboTrigger = turboTrigger;
         this.sniperTrigger = sniperTrigger;
+        this.pitchSupplier = pitchSupplier;
+        this.rollSupplier = rollSupplier;
         this.lastX = Double.NaN;
         this.lastY = Double.NaN;
         this.lastOmega = Double.NaN;
+        this.antiTipper = null;
 
         SmartDashboard.putData("TurboSniperSpeedSupplier", builder -> {
             builder.addStringProperty("Mode", () -> getMode().toString(), null);
@@ -167,10 +176,19 @@ public class SwerveTeleopSpeedSupplier implements Supplier<ChassisSpeeds> {
 
         }
 
-        return new ChassisSpeeds(
-                Units.feetToMeters(lastX),
-                Units.feetToMeters(lastY),
-                Math.toRadians(lastOmega));
+        // calculate output speeds
+        double vx = Units.feetToMeters(lastX);
+        double vy = Units.feetToMeters(lastY);
+        double vo = Math.toRadians(lastOmega);
+
+        // update with anti-tipping addition to speed, if enabled
+        if (checkAntiTipping()) {
+            ChassisSpeeds speeds = antiTipper.get();
+            vx += speeds.vxMetersPerSecond;
+            vy += speeds.vyMetersPerSecond;
+        }
+
+        return new ChassisSpeeds(vx, vy, vo);
     }
 
     // make sure that we're either applying or not applying slew rate limiting
@@ -190,11 +208,9 @@ public class SwerveTeleopSpeedSupplier implements Supplier<ChassisSpeeds> {
         }
     }
 
-    /**
-     * This applies slew limiting, but only when we're moving. If the desired
-     * speed is 0, we will simply stop and reset the slew limit. This is to
-     * keep manual targeting accurate.
-     */
+    // This applies slew limiting, but only when we're moving. If the desired
+    // speed is 0, we will simply stop and reset the slew limit. This is to
+    // keep manual targeting accurate
     private double slewLimit(double value, SlewRateLimiter limiter) {
         if (value == 0.0) {
             limiter.reset(0.0);
@@ -202,6 +218,24 @@ public class SwerveTeleopSpeedSupplier implements Supplier<ChassisSpeeds> {
             value = limiter.calculate(value);
         }
         return value;
+    }
+
+    // make sure that we're either applying or not applying anti tipping
+    // depending on the configuration property
+    private boolean checkAntiTipping() {
+        if (antiTippingEnabled.getAsBoolean()) {
+            if (antiTipper == null) {
+                Util.log("[SwerveSpeedSupplier] enabling anti tipper");
+                antiTipper = new SwerveTeleopAntiTipper(pitchSupplier, rollSupplier);
+            }
+            return true;
+        } else {
+            if (antiTipper != null) {
+                Util.log("[SwerveSpeedSupplier] disabling anti tipper");
+                antiTipper = null;
+            }
+            return false;
+        }
     }
 
     private double conditionInput(double input) {

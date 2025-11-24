@@ -43,6 +43,18 @@ public class SwerveTeleopConfig {
     /** Toggle field relative mode */
     public static final BooleanSupplier fieldRelative = pref("SwerveTeleop/FieldRelative?", true);
 
+    /** Toggle anti-tipping */
+    public static final BooleanSupplier antiTippingEnabled = pref("SwerveTeleop/AntiTippingEnabled?", false);
+
+    /** Anti-tipping correction speed */
+    public static final DoubleSupplier antiTippingSpeed = pref("SwerveDriveSubsystem/AntiTippingSpeed", 0.0);
+
+    /** Anti-tipping correction speed */
+    public static final DoubleSupplier antiTippingThreshold = pref("SwerveDriveSubsystem/AntiTippingThreshold", 0.0);
+
+    /** Anti-tipping proportional factor */
+    public static final DoubleSupplier antiTippingP = pref("SwerveDriveSubsystem/AntiTippingP", 0.0);
+
     /** Turn drift correction on/off */
     public static BooleanSupplier driftCorrection = pref("SwerveTeleop/DriftCorrection?", true);
 

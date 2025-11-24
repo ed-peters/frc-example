@@ -108,12 +108,19 @@ public class SwerveDriveSubsystem extends SubsystemBase {
         return kinematics;
     }
 
-    /**
-     * @return the current heading of the robot (you should always get this
-     * from the gyro hardware)
-     */
+    /** @return the current heading of the robot from the gyro hardware */
     public Rotation2d getHeading() {
         return chassis.getHeading();
+    }
+
+    /** @return the current roll of the robot from the gyro hardware */
+    public Rotation2d getRoll() {
+        return chassis.getRoll();
+    }
+
+    /** @return the current pitch of the robot from the gyro hardware */
+    public Rotation2d getPitch() {
+        return chassis.getPitch();
     }
 
     /**

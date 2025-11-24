@@ -37,6 +37,16 @@ public class SwerveChassisSim implements SwerveChassis {
     }
 
     @Override
+    public Rotation2d getPitch() {
+        return Util.ZERO_ROTATION;
+    }
+
+    @Override
+    public Rotation2d getRoll() {
+        return Util.ZERO_ROTATION;
+    }
+
+    @Override
     public ChassisSpeeds getCurrentSpeed() {        
         SwerveModuleState [] states = new SwerveModuleState[4];
         for (int i=0; i<4; i++) {

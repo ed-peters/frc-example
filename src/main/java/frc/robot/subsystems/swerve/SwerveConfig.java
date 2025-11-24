@@ -39,11 +39,9 @@ public class SwerveConfig {
      * Maximum wheel speed in meters per second no matter what mode we're in;
      * this is applied for last-ditch hardware safety and can be pretty high
      */
-    public static DoubleSupplier maximumWheelSpeed = pref("SwerveDriveSubsystem/MaxSpeed", 15.0);
+    public static final DoubleSupplier maximumWheelSpeed = pref("SwerveDriveSubsystem/MaxSpeed", 15.0);
 
-    /**
-     * Enable/disable cosine compensation
-     */
-    public static BooleanSupplier cosineCompensation = pref("SwerveDriveSubsystem/CosineCompensation", false);
+    /** Enable/disable cosine compensation */
+    public static final BooleanSupplier cosineCompensation = pref("SwerveDriveSubsystem/CosineCompensation", false);
 
 }

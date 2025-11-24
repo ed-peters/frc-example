@@ -17,6 +17,12 @@ public interface SwerveChassis {
     /** @return the current robot heading */
     Rotation2d getHeading();
 
+    /** @return the current robot pitch */
+    Rotation2d getPitch();
+
+    /** @return the current robot roll */
+    Rotation2d getRoll();
+
     /** @return the current robot speed */
     ChassisSpeeds getCurrentSpeed();
 
