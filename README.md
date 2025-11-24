@@ -9,28 +9,30 @@ It includes:
 
 
 * **Strap** - a very simple subsystem for driving open-loop behavior, with an implementation of "stall detection" that we found useful one year. See
-  * `frc.robot.subsystems.strap`
+  * [`frc.robot.subsystems.strap`](src/main/java/frc/robot/subsystems/strap)
 
 
 * **Intake** - a flywheel based subsystem, with support for closed loop based on rotation speed or linear speed, and some examples of using sensors
-  * `frc.robot.subsystems.intake`
-  * `frc.robot.commands.intake`
+  * [`frc.robot.subsystems.intake`](src/main/java/frc/robot/subsystems/intake)
+  * [`frc.robot.commands.intake`](src/main/java/frc/robot/commands/intake)
 
 
-* **Intake** - another flywheel based subsystem which uses hardware PID instead of software
-  * `frc.robot.subsystems.shooter`
-  * `frc.robot.commands.shooter`
+* **Shooter** - another flywheel based subsystem which uses hardware PID instead of software
+  * [`frc.robot.subsystems.shooter`](src/main/java/frc/robot/subsystems/shooter)
+  * [`frc.robot.commands.shooter`](src/main/java/frc/robot/commands/shooter)
 
 
 * **Elevator** - a position based subsystem, with support for tuning and driving quickly and smoothly to preset positions using motion profiles
-  * `frc.robot.subsystems.elevator`
-  * `frc.robot.commands.elevator`
+  * [`frc.robot.subsystems.elevator`](src/main/java/frc/robot/subsystems/elevator)
+  * [`frc.robot.commands.elevator`](src/main/java/frc/robot/commands/elevator)
 
 
 * **Swerve** - a swerve subsystem with commands for teleop mode (with a bunch of options we use every year) and various automatic targeting actions
-  * `frc.robot.subsystems.swerve`
-  * `frc.robot.commands.swerve`
+  * [`frc.robot.subsystems.swerve`](src/main/java/frc/robot/subsystems/swerve)
+  * [`frc.robot.commands.swerve`](src/main/java/frc/robot/commands/swerve)
 
 
 * **Auto** - an autonomous "subsystem" which shows how we pick and generate routines with a dedicated hardware component
-  * `frc.robot.subsystems.auto`
+  * [`frc.robot.subsystems.auto`](src/main/java/frc/robot/subsystems/auto)
+
+
