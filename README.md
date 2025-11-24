@@ -27,9 +27,14 @@ It includes:
   * [`frc.robot.commands.elevator`](src/main/java/frc/robot/commands/elevator)
 
 
-* **Swerve** - a swerve subsystem with commands for teleop mode (with a bunch of options we use every year) and various automatic targeting actions
+* **Swerve** - a swerve subsystem with commands for teleop mode (with a bunch of options we use every year) and various automatic movement actions
   * [`frc.robot.subsystems.swerve`](src/main/java/frc/robot/subsystems/swerve)
   * [`frc.robot.commands.swerve`](src/main/java/frc/robot/commands/swerve)
+
+
+* **Vision** - vision subsystems for Limelight and QuestNav with commands for resetting the robot's pose and tag-based targeting 
+  * [`frc.robot.subsystems.vision`](src/main/java/frc/robot/subsystems/vision)
+  * [`frc.robot.commands.vision`](src/main/java/frc/robot/commands/vision)
 
 
 * **Auto** - an autonomous "subsystem" which shows how we pick and generate routines with a dedicated hardware component

@@ -25,7 +25,7 @@ import static frc.robot.subsystems.vision.LimelightConfig.megaTagPoseKey;
  *     getting as we drive around the field; and,</li>
  *
  *     <li>Pretending to "see" a target when we are at a specific pose on
- *     the field.</li>
+ *     the field (see {@link #TAG_POSITION})</li>
  *
  * </ul>
  *
@@ -38,12 +38,27 @@ public class LimelightSim {
     public static final double TAG_ID = 16.0;
 
     /**
-     * This is the position on the field of AprilTag 16 in the 2025 game (this is
-     * the one on the blue algae chute)
+     * This is the position on the field of AprilTag 16 in the 2025 game
+     * (this is the one on the blue algae chute). If you drive the robot
+     * close to that tag,
      */
     public static final Translation2d TAG_POSITION = new Translation2d(
             Units.inchesToMeters(235.73),
             0.0);
+
+    /**
+     * This is the radius around the tag inside which we will pretend to
+     * "see" the tag - driving this close to the tag will result in position
+     * updates and targeting information showing up in NT
+     */
+    public static final double DEFAULT_DETECTION_RADIUS = Units.feetToMeters(10.0);
+
+    /**
+     * We add a little "noise" to the LL pose estimates, so we can tell them
+     * apart from the simulated odometry position of the robot; this is how
+     * far we offset the simulated position from the robot's actual pose
+     */
+    public static final double DEFAULT_POSE_ERROR = Units.inchesToMeters(4.0);
 
     final DoubleArrayPublisher classicPublisher;
     final DoubleArrayPublisher megaTagPublisher;
@@ -57,8 +72,8 @@ public class LimelightSim {
     public LimelightSim(SwerveDriveSubsystem drive) {
 
         this.drive = drive;
-        this.detectionRadius = 2.0;
-        this.poseError = 2.0;
+        this.detectionRadius = DEFAULT_DETECTION_RADIUS;
+        this.poseError = DEFAULT_POSE_ERROR;
 
         NetworkTable table = NetworkTableInstance.getDefault().getTable(limelightName);
         classicPublisher = table.getDoubleArrayTopic(classicPoseKey).publish();
@@ -107,8 +122,8 @@ public class LimelightSim {
         // it from the mega tag pose
 
         double [] megaTagPose = Arrays.copyOf(classicPose, classicPose.length);
-        megaTagPose[0] -= 2.0 * Units.inchesToMeters(poseError);
-        megaTagPose[1] -= 2.0 * Units.inchesToMeters(poseError);
+        megaTagPose[0] -= 2.0 * poseError;
+        megaTagPose[1] -= 2.0 * poseError;
         megaTagPublisher.accept(megaTagPose);
 
         // and finally, we'll update the basic targeting info
@@ -138,8 +153,8 @@ public class LimelightSim {
             // but always a little bit off; we'll simulate that by using a small
             // offset from the robot's current pose. and we'll assume the robot
             // isn't going to leave the ground.
-            robotPosition.getX() + Units.inchesToMeters(poseError),
-            robotPosition.getY() + Units.inchesToMeters(poseError),
+            robotPosition.getX() + poseError,
+            robotPosition.getY() + poseError,
             0.0,
 
             // next 3 = rotation in degrees (roll, pitch, yaw)
