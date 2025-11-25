@@ -189,3 +189,7 @@ compile_commands.json
 # Network tables simulation files
 networktables.*
 networktables.json.*
+
+# Vim stuff
+*.swo
+*.swp
