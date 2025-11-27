@@ -44,6 +44,21 @@ public class SwerveConfig {
     /**
      * Enable/disable cosine compensation
      */
-    public static BooleanSupplier cosineCompensation = pref("SwerveDriveSubsystem/CosineCompensation", false);
+    public static BooleanSupplier cosineCompensation = pref("SwerveDriveSubsystem/CosineCompensation?", false);
+
+    /**
+     * Enable/disable anti-tipping
+     */
+    public static BooleanSupplier antiTipping = pref("SwerveDriveSubsystem/AntiTipping?", false);
+
+    /**
+     * Enable/disable using fused pose estimates
+     */
+    public static BooleanSupplier useFusedPose = pref("SwerveDriveSubsystem/UseFusedPose?", true);
+
+    /**
+     * Enable/disable using fused pose estimates
+     */
+    public static BooleanSupplier useVisionHeading = pref("SwerveDriveSubsystem/UseGyroHeading?", true);
 
 }

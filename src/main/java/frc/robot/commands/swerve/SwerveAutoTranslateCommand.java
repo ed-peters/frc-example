@@ -86,7 +86,7 @@ public class SwerveAutoTranslateCommand extends Command {
     public void initialize() {
 
         // let's calculate our starting end ending pose for this movement
-        startPose = drive.getFusedPose();
+        startPose = drive.getPose();
         finalPose = startPose.plus(new Transform2d(cos * distance, sin * distance, angle));
 
         // let's also re-read configuration to create an up-to-date motion
@@ -100,7 +100,7 @@ public class SwerveAutoTranslateCommand extends Command {
         Util.resetPid(pidX, translateP, translateD, translateTolerance);
         Util.resetPid(pidY, translateP, translateD, translateTolerance);
 
-        Util.log("[swerve-pose] headed to %s", finalPose);
+        Util.log("[swerve-translate] headed to %s", finalPose);
 
         timer.restart();
     }
@@ -121,7 +121,7 @@ public class SwerveAutoTranslateCommand extends Command {
         nextSpeedY = nextState.velocity * sin;
 
         // we also use the target pose for feedback, to stay on target
-        Pose2d currentPose = drive.getFusedPose();
+        Pose2d currentPose = drive.getPose();
         nextSpeedX += Util.applyClamp(
                 pidX.calculate(currentPose.getX(), nextX),
                 translateMaxFeedback);
@@ -164,7 +164,7 @@ public class SwerveAutoTranslateCommand extends Command {
     public void end(boolean interrupted) {
 
         double distanceToTarget = drive
-                .getFusedPose()
+                .getPose()
                 .getTranslation()
                 .getDistance(finalPose.getTranslation());
 
@@ -179,7 +179,7 @@ public class SwerveAutoTranslateCommand extends Command {
         // always log failure; if you see this in logs a log it might
         // suggest the need to re-tune
         if (!success) {
-            Util.log("[swerve-pose] !!! MISSED goal %s by %.2f !!!", finalPose, distanceToTarget);
+            Util.log("[swerve-translate] !!! MISSED goal %s by %.2f !!!", finalPose, distanceToTarget);
         }
 
         nextSpeedX = Double.NaN;

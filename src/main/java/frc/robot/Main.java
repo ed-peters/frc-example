@@ -6,13 +6,14 @@ package frc.robot;
 
 import edu.wpi.first.wpilibj.RobotBase;
 import frc.robot.testbots.AutoSimRobot;
+import frc.robot.testbots.SwerveSimRobot;
 
 public final class Main {
   private Main() {}
 
   public static void main(String... args) {
     // RobotBase.startRobot(ElevatorSimRobot::new);
-    //  RobotBase.startRobot(SwerveSimRobot::new);
-     RobotBase.startRobot(AutoSimRobot::new);
+     RobotBase.startRobot(SwerveSimRobot::new);
+    //  RobotBase.startRobot(AutoSimRobot::new);
   }
 }

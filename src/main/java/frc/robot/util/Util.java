@@ -10,6 +10,8 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.trajectory.TrapezoidProfile.State;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.networktables.BooleanEntry;
+import edu.wpi.first.networktables.BooleanTopic;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.StructPublisher;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -142,6 +144,8 @@ public class Util {
         return pose.map(Pose3d::toPose2d).orElse(null);
     }
 
+    static BooleanEntry isRedAlliance = null;
+
     /**
      * @return true if we are on the red alliance (if we're simulating we
      * have to fetch that from the dashboard; otherwise we'll talk to the
@@ -149,11 +153,13 @@ public class Util {
      */
     public static boolean isRedAlliance() {
         if (RobotBase.isSimulation()) {
-            return NetworkTableInstance.getDefault()
+            if (isRedAlliance == null) {
+                isRedAlliance = NetworkTableInstance.getDefault()
                     .getTable("FMSInfo")
                     .getBooleanTopic("IsRedAlliance")
-                    .getEntry(false)
-                    .get();
+                    .getEntry(false);
+            }
+            return isRedAlliance.get();
         } else {
             return DriverStation.getAlliance().orElse(Alliance.Red) == Alliance.Red;
         }

@@ -161,7 +161,7 @@ public class LimelightSubsystem extends SubsystemBase {
         lastClassicStatus = Status.SUCCESS;
         lastPose = estimate.pose;
 
-        drive.addVisionPose(
+        drive.getPoseCalculator().addVisionPose(
                 estimate.pose,
                 estimate.timestampSeconds,
                 confidenceClassic);
@@ -209,7 +209,7 @@ public class LimelightSubsystem extends SubsystemBase {
         lastMegaTagStatus = Status.SUCCESS;
         lastPose = estimate.pose;
 
-        drive.addVisionPose(
+        drive.getPoseCalculator().addVisionPose(
                 estimate.pose,
                 estimate.timestampSeconds,
                 confidenceMegaTag2);

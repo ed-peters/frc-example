@@ -1,17 +1,10 @@
 package frc.robot.subsystems.swerve;
 
-import edu.wpi.first.math.Matrix;
-import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
-import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
-import edu.wpi.first.math.kinematics.SwerveModulePosition;
-import edu.wpi.first.math.kinematics.SwerveModuleState;
-import edu.wpi.first.math.numbers.N1;
-import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -26,17 +19,15 @@ import frc.robot.commands.swerve.SwerveTeleopCommand;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.DoubleSupplier;
+import java.util.function.Supplier;
 
 import static frc.robot.subsystems.swerve.SwerveConfig.kinematics;
-import static frc.robot.subsystems.swerve.SwerveConfig.maximumWheelSpeed;
 
 /**
  * Interface for a swerve drive
  */
 public class SwerveDriveSubsystem extends SubsystemBase {
-
-    /** Implements a "quiet mode" to prevent spamming the dashboard during competition */
-    public static final boolean ALL_THE_LOGS = true;
 
     public enum Direction {
         NORTH,
@@ -46,55 +37,34 @@ public class SwerveDriveSubsystem extends SubsystemBase {
     }
 
     final SwerveChassis chassis;
-    final List<Consumer<Pose2d>> poseListeners;
-    SwerveDriveOdometry odometry;
-    SwerveDrivePoseEstimator estimator;
-    Pose2d lastVisionPose;
-    Pose2d lastOdometryPose;
-    Pose2d lastFusedPose;
-    double lastVisionTimestamp;
-    ChassisSpeeds lastSpeeds;
-    Rotation2d currentHeading;
+    final SwervePoseCalculator poseCalculator;
+    final SwerveKinematicsCalculator stateCalculator;
+    final List<Consumer<Pose2d>> poseResetListeners;
+    Rotation2d latestGyroHeading;
+    Pose2d latestPoseEstimate;
+    ChassisSpeeds latestSpeeds;
     String currentCommand;
 
     public SwerveDriveSubsystem(SwerveChassis chassis) {
 
         this.chassis = chassis;
-        this.poseListeners = new ArrayList<>();
-        this.odometry = new SwerveDriveOdometry(
-                kinematics,
-                chassis.getHeading(),
-                chassis.getModulePositions());
-        this.estimator = new SwerveDrivePoseEstimator(
-                kinematics,
-                chassis.getHeading(),
-                chassis.getModulePositions(),
-                Util.ZERO_POSE);
-        this.currentCommand = "";
-        this.currentHeading = chassis.getHeading();
-        this.lastVisionPose = Util.NAN_POSE;
-        this.lastOdometryPose = Util.ZERO_POSE;
-        this.lastFusedPose = Util.ZERO_POSE;
-        this.lastSpeeds = Util.ZERO_SPEED;
+        this.poseCalculator = new SwervePoseCalculator(chassis, Util.ZERO_POSE);
+        this.stateCalculator = new SwerveKinematicsCalculator(chassis);
+        this.poseResetListeners = new ArrayList<>();
+        this.latestSpeeds = Util.NAN_SPEED;
+        this.latestGyroHeading = chassis.getGyroHeading();
+        this.latestPoseEstimate = Util.ZERO_POSE;
+        this.latestSpeeds = chassis.getCurrentSpeed();
         this.currentCommand = "";
 
         SmartDashboard.putData("SwerveDriveSubsystem", builder -> {
-            builder.addDoubleProperty("Heading", () -> currentHeading.getDegrees(), null);
-            builder.addDoubleProperty("Speed/X", () -> lastSpeeds.vxMetersPerSecond, null);
-            builder.addDoubleProperty("Speed/Y", () -> lastSpeeds.vyMetersPerSecond, null);
-            builder.addDoubleProperty("Speed/Omega", () -> Math.toDegrees(lastSpeeds.omegaRadiansPerSecond), null);
-            if (ALL_THE_LOGS) {
-                builder.addDoubleProperty("Poses/Vision/X", () -> lastVisionPose.getX(), null);
-                builder.addDoubleProperty("Poses/Vision/Y", () -> lastVisionPose.getY(), null);
-                builder.addDoubleProperty("Poses/Vision/Omega", () -> lastVisionPose.getRotation().getDegrees(), null);
-                builder.addDoubleProperty("Poses/Vision/Timestamp", () -> lastVisionTimestamp, null);
-                builder.addDoubleProperty("Poses/Fused/X", () -> lastFusedPose.getX(), null);
-                builder.addDoubleProperty("Poses/Fused/Y", () -> lastFusedPose.getY(), null);
-                builder.addDoubleProperty("Poses/Fused/Omega", () -> lastFusedPose.getRotation().getDegrees(), null);
-                builder.addDoubleProperty("Poses/Odometry/X", () -> lastOdometryPose.getX(), null);
-                builder.addDoubleProperty("Poses/Odometry/Y", () -> lastOdometryPose.getY(), null);
-                builder.addDoubleProperty("Poses/Odometry/Omega", () -> lastOdometryPose.getRotation().getDegrees(), null);
-            }
+            builder.addDoubleProperty("GyroHeading", () -> latestGyroHeading.getDegrees(), null);
+            builder.addDoubleProperty("PoseX", () -> Units.metersToFeet(latestPoseEstimate.getX()), null);
+            builder.addDoubleProperty("PoseY", () -> Units.metersToFeet(latestPoseEstimate.getY()), null);
+            builder.addDoubleProperty("PoseDegrees", () -> latestPoseEstimate.getRotation().getDegrees(), null);
+            builder.addDoubleProperty("SpeedX", () -> Units.metersToFeet(latestSpeeds.vxMetersPerSecond), null);
+            builder.addDoubleProperty("SpeedY", () -> Units.metersToFeet(latestSpeeds.vyMetersPerSecond), null);
+            builder.addDoubleProperty("SpeedOmega", () -> Units.radiansToDegrees(latestSpeeds.omegaRadiansPerSecond), null);
         });
     }
 
@@ -103,163 +73,73 @@ public class SwerveDriveSubsystem extends SubsystemBase {
         return chassis.getCurrentSpeed();
     }
 
+    /** @return the pose calculator */
+    public SwervePoseCalculator getPoseCalculator() {
+        return poseCalculator;
+    }
+
     /** @return kinematics for the drive */
     public SwerveDriveKinematics getKinematics() {
         return kinematics;
     }
 
-    /**
-     * @return the current heading of the robot (you should always get this
-     * from the gyro hardware)
-     */
+    /** @return the heading of the robot */
     public Rotation2d getHeading() {
-        return chassis.getHeading();
+        return latestPoseEstimate.getRotation();
     }
 
-    /**
-     * @return the current rate of change of the heading in degrees per
-     * second (you should always get this from the gyro hardware)
-     */
+    /** @return the rate of change of the heading in degrees per second */
     public double getYawRate() {
         return chassis.getYawRate();
     }
 
     /** @return the pose as calculated purely on the odometry */
-    public Pose2d getOdometryPose() {
-        return odometry.getPoseMeters();
-    }
-
-    /**
-     * @return the most recent vision-based estimate of the pose of the robot
-     * (this will never be null, but might be all NaNs if there is no latest
-     * pose)
-     */
-    public Pose2d getVisionPose() {
-        return lastVisionPose;
-    }
-
-    /** @return the fused estimate (vision + odometry) of the pose of the robot */
-    public Pose2d getFusedPose() {
-        return estimator.getEstimatedPosition();
-    }
-
-    /**
-     * Add a vision pose to the estimator. The parameters indicate how much
-     * to "trust" the vision estimate, and approximately how old it is (in
-     * seconds since the robot started up).
-     */
-    public void addVisionPose(Pose2d pose, double timestamp, Matrix<N3,N1> stdDevs) {
-        if (pose != null) {
-            estimator.setVisionMeasurementStdDevs(stdDevs);
-            estimator.addVisionMeasurement(pose, timestamp);
-            lastVisionPose = pose;
-            lastVisionTimestamp = timestamp;
-        } else {
-            lastVisionPose = Util.NAN_POSE;
-            lastVisionTimestamp = Double.NaN;
-        }
+    public Pose2d getPose() {
+        return latestPoseEstimate;
     }
 
     /**
      * Adds a listener that gets called whenever the robot's pose gets
      * reset (for instance, at the beginning of auto)
      */
-    public void addPoseListener(Consumer<Pose2d> listener) {
-        poseListeners.add(listener);
+    public void addPoseResetListener(Consumer<Pose2d> listener) {
+        poseResetListeners.add(listener);
     }
 
     /**
      * Reset the pose of the robot to the specified value. This will also
-     * notify anything listening to
+     * notify anything listening for pose resets.
      */
-    public void resetPose(Pose2d pose) {
-
-        chassis.resetHeading(pose.getRotation());
-        
-        odometry.resetPosition(
-            chassis.getHeading(),
-            chassis.getModulePositions(),
-            pose);
-
-        estimator.resetPosition(
-            chassis.getHeading(),
-            chassis.getModulePositions(),
-            pose);
-
-        for (Consumer<Pose2d> listener : poseListeners) {
-            listener.accept(pose);
+    public void resetPose(Pose2d newPose) {
+        poseCalculator.resetPose(newPose);
+        for (Consumer<Pose2d> listener : poseResetListeners) {
+            listener.accept(newPose);
         }
-
+        latestPoseEstimate = newPose;
         Util.log("[swerve] reset pose to %s and notified %d listeners",
-                pose,
-                poseListeners.size());
-    }
-
-    /**
-     * Reset the pose of the robot to (0, 0, 0)
-     */
-    public void resetToZeroPose() {
-        resetPose(Util.ZERO_POSE);
-    }
-
-    /**
-     * Reset the heading of the robot to the supplied angle
-     */
-    public void resetHeading(Rotation2d heading) {
-        Pose2d currentPose = getFusedPose();
-        Pose2d newPose = new Pose2d(currentPose.getTranslation(), heading);
-        resetPose(newPose);
-    }
-
-    /**
-     * Reset the heading of the robot to the 0
-     */
-    public void resetToZeroHeading() {
-        resetHeading(Util.ZERO_ROTATION);
+                newPose,
+                poseResetListeners.size());
     }
 
     /**
      * Tells the robot to drive at the specified speeds in "robot
-     * relative" coordinates
+     * relative" coordinates, with the center of rotation being the
+     * center of the robot
      */
     public void drive(String command, ChassisSpeeds speeds) {
-
-        currentCommand = command;
-
-        lastSpeeds = speeds;
-
-        // use kinematics to turn drive speed into wheel states
-        // this tells each wheel how fast to spin and at what angle
-        SwerveModuleState [] states = kinematics.toSwerveModuleStates(speeds);
-
-        // this will scale speeds down so no single wheel is ever turning
-        // faster than the absolute maximum speed
-        SwerveDriveKinematics.desaturateWheelSpeeds(states,
-                maximumWheelSpeed.getAsDouble());
-
-        // drive!
-        chassis.setModuleStates(states);
+        drive(command, speeds, Translation2d.kZero);
     }
 
     /**
-     * Tells the robot to rotate around the specified point at the
-     * specified speed
+     * Tells the robot to drive at the specified speeds in "robot
+     * relative" coordinates, with the specified center of rotation
      */
-    public void rotateAround(Translation2d centerOfRotation, double degreesPerSecond) {
-
-        ChassisSpeeds speeds = new ChassisSpeeds(0, 0, Units.degreesToRadians(degreesPerSecond));
-
-        // this does the equations to decide how fast to spin the wheels
-        // and in which directions, to accomplish rotation around the
-        // supplied point
-        SwerveModuleState [] states = kinematics.toSwerveModuleStates(speeds, centerOfRotation);
-
-        // same as above - scale speeds down to avoid rotating any of
-        // them faster than the hardware will allow
-        SwerveDriveKinematics.desaturateWheelSpeeds(states,
-                Units.feetToMeters(maximumWheelSpeed.getAsDouble()));
-
-        chassis.setModuleStates(states);
+    public void drive(String command, ChassisSpeeds speeds, Translation2d centerOfRotation) {
+        currentCommand = command;
+        latestSpeeds = speeds;
+        chassis.setModuleStates(stateCalculator.calculateStates(
+                speeds,
+                centerOfRotation));
     }
 
     /**
@@ -267,23 +147,9 @@ public class SwerveDriveSubsystem extends SubsystemBase {
      */
     @Override
     public void periodic() {
-
-        currentHeading = getHeading();
-
-        SwerveModulePosition [] positions = chassis.getModulePositions();
-
-        // update both the odometry and the fused pose estimator
-        odometry.update(currentHeading, positions);
-        estimator.update(currentHeading, positions);
-
-        // calculate these each go-round for monitoring
-        lastFusedPose = getFusedPose();
-        lastOdometryPose = getOdometryPose();
-
-        // publish them as structs so we can see them in advantage scope
-        Util.publishPose("FusedPose", lastFusedPose);
-        Util.publishPose("OdometryPose", lastOdometryPose);
-        Util.publishPose("VisionPose", lastVisionPose);
+        poseCalculator.calculateLatestPoses();
+        latestGyroHeading = chassis.getGyroHeading();
+        latestPoseEstimate = poseCalculator.getPoseEstimate();
     }
 
     // ========================================================
@@ -293,6 +159,34 @@ public class SwerveDriveSubsystem extends SubsystemBase {
     /** @return a teleop command for this drive and controller */
     public Command teleopCommand(CommandXboxController controller) {
         return SwerveTeleopCommand.create(this, controller);
+    }
+
+    /** @return a command to rotate the robot around a point on the field */
+    public Command rotateAroundPointCommand(Supplier<Pose2d> pointSupplier,
+                                            DoubleSupplier speedSupplier) {
+
+        // we'll use a proxy command because we need to calculate the
+        // center of rotation each time we run the command
+        return Commands.deferredProxy(() -> {
+
+            // the center of rotation is the difference between the target
+            // point and the current pose
+            Pose2d point = pointSupplier.get();
+            Translation2d centerOfRotation = point
+                    .minus(getPose())
+                    .getTranslation();
+
+            Util.log("[swerve] rotating around point = %s; COR = %s",
+                    point,
+                    centerOfRotation);
+
+            return run(() -> {
+                drive(
+                        "rotate",
+                        new ChassisSpeeds(0.0, 0.0, speedSupplier.getAsDouble()),
+                        centerOfRotation);
+            });
+        });
     }
 
     /** @return a command to align the robot to an arena wall */

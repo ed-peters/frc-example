@@ -89,6 +89,10 @@ public class AutonomousSubsystem extends SubsystemBase {
         Util.log("[auto] loading robot configuration");
         RobotConfig config = RobotConfig.fromGUISettings();
 
+        // this registers all the commands we'll use when executing our
+        // selected program
+        registerNamedCommands();
+
         // this is what accepts calculated speeds from the path engine
         // and actually applies them to drive the robot around; if the
         // robot isn't moving at all, start debugging here
@@ -108,7 +112,7 @@ public class AutonomousSubsystem extends SubsystemBase {
 
         Util.log("[auto] configuring AutoBuilder");
         AutoBuilder.configure(
-                drive::getFusedPose,
+                drive::getPose,
                 drive::resetPose,
                 drive::getCurrentSpeed,
                 output,
@@ -133,9 +137,9 @@ public class AutonomousSubsystem extends SubsystemBase {
 
     /**
      * Call this from {@link TimedRobot#autonomousInit()} to create the
-     * actual command. You should do all the work of loading the program
-     * and configuring PathPlanner here, so the field operator doesn't
-     * have to wait for it to happen.
+     * actual command. We do all the work of loading the program and
+     * configuring PathPlanner here, so the field operator doesn't have
+     * to wait for it to happen.
      */
     public Command generateCommand() {
 

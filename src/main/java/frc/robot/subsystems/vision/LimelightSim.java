@@ -10,6 +10,7 @@ import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.robot.subsystems.swerve.SwerveDriveSubsystem;
+import frc.robot.subsystems.swerve.SwervePoseCalculator.PoseType;
 
 import java.util.Arrays;
 
@@ -90,7 +91,8 @@ public class LimelightSim {
 
     public void updateFakePoses() {
 
-        Pose2d odometry = drive.getOdometryPose();
+        Pose2d odometry = drive.getPoseCalculator()
+                .getPoseEstimate(PoseType.ODOMETRY);
 
         // we'll only fake pose estimates if the robot is within a few
         // meters of the tag

@@ -25,7 +25,7 @@ public class QuestnavSubsystem extends SubsystemBase {
         this.estimatedPose = null;
 
         if (drive != null) {
-            drive.addPoseListener(this::resetPose);
+            drive.addPoseResetListener(this::resetPose);
         }
 
         SmartDashboard.putData("QuestnavSubsystem", builder -> {
@@ -64,7 +64,10 @@ public class QuestnavSubsystem extends SubsystemBase {
 
         // contribute that to the swerve drive if necessary
         if (drive != null) {
-            drive.addVisionPose(estimatedPose, frame.dataTimestamp(), confidence);
+            drive.getPoseCalculator().addVisionPose(
+                    estimatedPose,
+                    frame.dataTimestamp(),
+                    confidence);
         }
     }
 }

@@ -23,7 +23,6 @@ import frc.robot.commands.vision.ThreeStageTargetingCommand;
  */
 public class SwerveSimRobot extends TimedRobot {
 
-    SwerveChassisSim sim;
     SwerveDriveSubsystem drive;
     LimelightSubsystem limelight;
     LimelightSim limelightSim;
@@ -31,8 +30,7 @@ public class SwerveSimRobot extends TimedRobot {
 
     public SwerveSimRobot() {
 
-        sim = new SwerveChassisSim();
-        drive = new SwerveDriveSubsystem(sim);
+        drive = new SwerveDriveSubsystem(new SwerveChassisSim());
         limelight = new LimelightSubsystem(drive);
         limelightSim = new LimelightSim(drive);
         controller = new CommandXboxController(0);
