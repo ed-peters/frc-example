@@ -50,10 +50,6 @@ public class SwerveAutoTranslateCommand extends Command {
     TrapezoidProfile profile;
     Pose2d startPose;
     Pose2d finalPose;
-    double nextSpeedX;
-    double nextSpeedY;
-    double nextX;
-    double nextY;
 
     public SwerveAutoTranslateCommand(SwerveDriveSubsystem drive, Translation2d offset) {
 
@@ -85,9 +81,16 @@ public class SwerveAutoTranslateCommand extends Command {
     @Override
     public void initialize() {
 
-        // let's calculate our starting end ending pose for this movement
+        // let's calculate our starting end ending pose for this movement;
+        // we use "transformBy" so the offset is relative to the robot's
+        // current position (+X is the direction the robot is currently
+        // facing, +Y is to the robot's left)
         startPose = drive.getPose();
-        finalPose = startPose.plus(new Transform2d(cos * distance, sin * distance, angle));
+        finalPose = startPose.transformBy(new Transform2d(
+            distance * cos,
+            distance * sin,
+            Util.ZERO_ROTATION));
+        Util.log("[swerve-translate] headed to %s", finalPose);
 
         // let's also re-read configuration to create an up-to-date motion
         // profile note that configuration is in feet per second so we
@@ -100,8 +103,6 @@ public class SwerveAutoTranslateCommand extends Command {
         Util.resetPid(pidX, translateP, translateD, translateTolerance);
         Util.resetPid(pidY, translateP, translateD, translateTolerance);
 
-        Util.log("[swerve-translate] headed to %s", finalPose);
-
         timer.restart();
     }
 
@@ -111,29 +112,39 @@ public class SwerveAutoTranslateCommand extends Command {
         // this will give us the current distance and speed along our line
         State nextState = profile.calculate(timer.get(), startState, finalState);
 
-        // we calculate the "next" position of the robot using the position
-        // along the line to the target
-        nextX = startPose.getX() + nextState.position * cos;
-        nextY = startPose.getY() + nextState.position * sin;
+        // this is the corresponding field position (again notice that we
+        // are using "transformBy")
+        Pose2d nextPose = startPose.transformBy(new Transform2d(
+            nextState.position * cos,
+            nextState.position * sin,
+            Util.ZERO_ROTATION));
 
-        // we use the calculated velocity as the basis for our speed
-        nextSpeedX = nextState.velocity * cos;
-        nextSpeedY = nextState.velocity * sin;
+        // this is how fast we should be moving along the straight line from
+        // start position to final position, based only on our motion profile
+        // (this is basically our "feedforward")
+        double nextSpeedX = nextState.velocity * cos;
+        double nextSpeedY = nextState.velocity * sin;
 
-        // we also use the target pose for feedback, to stay on target
+        // this calculates where we should be on the field, and an error
+        // from the current position; that will allow us to add in an
+        // adjustment to speed (this is our "feedback")
         Pose2d currentPose = drive.getPose();
+        Transform2d poseError = nextPose.minus(currentPose);
         nextSpeedX += Util.applyClamp(
-                pidX.calculate(currentPose.getX(), nextX),
+                pidX.calculate(0.0, poseError.getX()),
                 translateMaxFeedback);
         nextSpeedY += Util.applyClamp(
-                pidY.calculate(currentPose.getY(), nextY),
+                pidY.calculate(0.0, poseError.getY()),
                 translateMaxFeedback);
 
         // let's drive!
-        drive.drive("offset", new ChassisSpeeds(nextSpeedX, nextSpeedY, 0.0));
-
+        drive.drive("offset", new ChassisSpeeds(
+                nextSpeedX, 
+                nextSpeedY, 
+                0.0));
+        
         // publish the "next" and final poses for debugging
-        Util.publishPose("AlignOffsetNext", new Pose2d(nextX, nextY, startPose.getRotation()));
+        Util.publishPose("AlignOffsetNext", nextPose);
         Util.publishPose("AlignOffsetFinal", finalPose);
 
         // in normal operation, we're probably going to wind up with
@@ -182,10 +193,6 @@ public class SwerveAutoTranslateCommand extends Command {
             Util.log("[swerve-translate] !!! MISSED goal %s by %.2f !!!", finalPose, distanceToTarget);
         }
 
-        nextSpeedX = Double.NaN;
-        nextSpeedY = Double.NaN;
-        nextX = Double.NaN;
-        nextY = Double.NaN;
         timer.stop();
 
         if (enableLogging) {
