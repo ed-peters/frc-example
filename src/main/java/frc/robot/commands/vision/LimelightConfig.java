@@ -9,16 +9,16 @@ public class LimelightConfig {
     public static final boolean enableLogging = true;
 
     /** Properties for aligning to an AprilTag (x direction) */
-    public static DoubleSupplier limelightOffsetP = pref("LimelightCommand/OffsetKP", 0.0);
+    public static DoubleSupplier limelightOffsetP = pref("LimelightCommand/OffsetKP", 0.1);
     public static DoubleSupplier limelightOffsetD = pref("LimelightCommand/OffsetKD", 0.0);
     public static DoubleSupplier limelightOffsetTarget = pref("LimelightCommand/OffsetTarget", 0.0);
-    public static DoubleSupplier limelightOffsetTolerance = pref("LimelightCommand/OffsetTolerance", 0.0);
+    public static DoubleSupplier limelightOffsetTolerance = pref("LimelightCommand/OffsetTolerance", 3.0);
 
     /** Properties for aligning to an AprilTag (y direction) */
-    public static DoubleSupplier limelightAreaP = pref("LimelightCommand/AreaKP", 0.0);
+    public static DoubleSupplier limelightAreaP = pref("LimelightCommand/AreaKP", 0.5);
     public static DoubleSupplier limelightAreaD = pref("LimelightCommand/AreaKD", 0.0);
-    public static DoubleSupplier limelightAreaTarget = pref("LimelightCommand/AreaTarget", 0.0);
-    public static DoubleSupplier limelightAreaTolerance = pref("LimelightCommand/AreaTolerance", 0.0);
+    public static DoubleSupplier limelightAreaTarget = pref("LimelightCommand/AreaTarget", 4.0);
+    public static DoubleSupplier limelightAreaTolerance = pref("LimelightCommand/AreaTolerance", 0.5);
 
     /** Properties for aligning to an AprilTag (both directions) */
     public static DoubleSupplier limelightMaxFeedback = pref("LimelightCommand/MaxFeedback", 0.0);

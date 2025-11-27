@@ -142,7 +142,9 @@ public class SwerveAutoRotateCommand extends Command {
 
         // always log failure; if you see this in logs a log it might
         // suggest the need to re-tune
-        if (!success) {
+        if (success) {
+            Util.log("[swerve-rotate] done rotating");
+        } else {
             Util.log("[swerve-rotate] !!! MISSED goal %.2f b y%.2f !!!",
                     finalState.position,
                     pid.getError());

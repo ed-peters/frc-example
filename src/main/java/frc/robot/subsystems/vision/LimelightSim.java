@@ -130,7 +130,7 @@ public class LimelightSim {
 
         // and finally, we'll update the basic targeting info
 
-        txPublisher.accept(odometry.getX() - TAG_POSITION.getX());
+        txPublisher.accept(TAG_POSITION.getX() - odometry.getX());
         taPublisher.accept(tagArea);
         tidPublisher.accept(TAG_ID);
 

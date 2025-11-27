@@ -46,8 +46,8 @@ public class LimelightAprilTagCommand extends Command {
     double lastArea;
     double lastSpeedX;
     double lastSpeedY;
-    boolean achievedX;
-    boolean achievedY;
+    boolean achievedArea;
+    boolean achievedOffset;
     boolean running;
 
     public LimelightAprilTagCommand(SwerveDriveSubsystem drive,
@@ -62,15 +62,15 @@ public class LimelightAprilTagCommand extends Command {
     @Override
     public void initialize() {
 
-        achievedX = false;
-        achievedY = false;
+        achievedArea = false;
+        achievedOffset = false;
         running = true;
 
         // always reset the PIDs when you're doing closed loop
         Util.resetPid(pidOffset, limelightOffsetP, limelightOffsetD, limelightOffsetTolerance);
         Util.resetPid(pidArea, limelightAreaP, limelightAreaD, limelightAreaTolerance);
 
-        Util.log("[ll-id] aligning to id");
+        Util.log("[ll-target] aligning to id");
     }
 
     @Override
@@ -81,7 +81,7 @@ public class LimelightAprilTagCommand extends Command {
         // if we lose sight of the id, we can't really do anything
         // and we have to quit
         if (target == null || target.id() < 1) {
-            Util.log("[ll-id] NO TAG IN VIEW !!!");
+            Util.log("[ll-target] NO TAG IN VIEW !!!");
             running = false;
             return;
         }
@@ -95,27 +95,27 @@ public class LimelightAprilTagCommand extends Command {
         lastArea = target.area();
 
         // the limelight reports TX as positive when the id is offset to the
-        // left. if this was the case, we would want to move in the +X
-        // direction, which is also positive. so we will negate the offset
+        // left. if this was the case, we would want to move left (+Y
+        // direction), which is also positive. so we will negate the offset
         // for our feedback.
         lastOffset = -target.offset();
 
         // calculate X speed if we're not done centering the id
-        if (!achievedX) {
-            lastSpeedX = pidOffset.calculate(lastOffset, limelightOffsetTarget.getAsDouble());
-            achievedX = pidOffset.atSetpoint();
+        if (!achievedArea) {
+            lastSpeedX = pidArea.calculate(lastArea, limelightAreaTarget.getAsDouble());
+            achievedArea = pidArea.atSetpoint();
         }
 
         // calculate the Y speed if the id isn't close enough
-        if (!achievedY) {
-            lastSpeedY = pidArea.calculate(lastArea, limelightAreaTarget.getAsDouble());
-            achievedY = pidArea.atSetpoint();
+        if (!achievedOffset) {
+            lastSpeedY = pidOffset.calculate(lastOffset, limelightOffsetTarget.getAsDouble());
+            achievedOffset = pidOffset.atSetpoint();
         }
 
         // we will run until we've hit both objectives
-        running = !(achievedX && achievedY);
+        running = !(achievedArea && achievedOffset);
 
-        drive.drive("ll-id", new ChassisSpeeds(
+        drive.drive("ll-target", new ChassisSpeeds(
                 lastSpeedX,
                 lastSpeedY,
                 0.0));
@@ -151,13 +151,13 @@ public class LimelightAprilTagCommand extends Command {
         // if we lost sight of the id, or we were interrupted, we should
         // know that so we can check tuning etc.
         String which = "";
-        if (!achievedX && achievedY) {
+        if (!achievedArea && achievedOffset) {
             which = "X";
         }
-        if (achievedX && !achievedY) {
+        if (achievedArea && !achievedOffset) {
             which = "Y";
         }
-        if (!achievedX && !achievedY) {
+        if (!achievedArea && !achievedOffset) {
             which = "X and Y";
         }
         if (!which.isEmpty()) {
@@ -170,7 +170,7 @@ public class LimelightAprilTagCommand extends Command {
         lastSpeedY = Double.NaN;
 
         if (enableLogging) {
-            SmartDashboard.putBoolean("SwerveTargetAprilTagCommand/Running?", false);
+            SmartDashboard.putBoolean("LimelightAprilTagCommand/Running?", false);
         }
     }
 }
