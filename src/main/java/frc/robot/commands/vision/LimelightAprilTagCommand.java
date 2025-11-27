@@ -23,17 +23,17 @@ import static frc.robot.commands.vision.LimelightConfig.limelightOffsetTolerance
  * This aligns the robot to an AprilTag based on:
  * <ul>
  *
- *     <li>The offset of the id to the center of the camera frame.
- *     This is based on the Limelight TX value, which is is >0 if the
- *     tag is to the right in the frame.</li>
+ *     <li>The offset of the id to the center of the camera frame. This is
+ *     based on the Limelight TX value, which is is >0 if the tag is to the
+ *     left of center in the frame.</li>
  *
- *     <li>The area of the id in the camera frame. For the Limelight,
- *     this is TA, and gets bigger the closer we are to the id.</li>
+ *     <li>The area of the id in the camera frame. For the Limelight, this is
+ *     TA, and gets bigger the closer we are to the id.</li>
  *
  * </ul>
  *
  * By tuning this command you will be able to arrive at a reliable
- * position in front of an a id, which is an important step in
+ * position in front of a tag, which is an important step in 
  * targeting.</p>
  */
 public class LimelightAprilTagCommand extends Command {
@@ -89,24 +89,25 @@ public class LimelightAprilTagCommand extends Command {
         lastSpeedX = 0.0;
         lastSpeedY = 0.0;
 
-        // area is how big the target is in the camera frame; bigger means
-        // we're closer to the target (and thus would want to move in the -X
-        // direction.
+        // area is how big the tag is in the camera frame; bigger means we're
+        // closer to the tag (and hence we want to move in the -X direction)
         lastArea = target.area();
 
-        // the limelight reports TX as positive when the id is offset to the
-        // left. if this was the case, we would want to move left (+Y
+        // the limelight reports TX as positive when the tag is offset to the
+        // left. when this is the case, we would want to move left (the +Y
         // direction), which is also positive. so we will negate the offset
         // for our feedback.
         lastOffset = -target.offset();
 
-        // calculate X speed if we're not done centering the id
+        // calculate X speed (forward-back) if the tag is either too big or
+        // to small in the camera frame
         if (!achievedArea) {
             lastSpeedX = pidArea.calculate(lastArea, limelightAreaTarget.getAsDouble());
             achievedArea = pidArea.atSetpoint();
         }
 
-        // calculate the Y speed if the id isn't close enough
+        // calculate the Y speed (left-right) if the tag is to the right or
+        // left of the desired offset
         if (!achievedOffset) {
             lastSpeedY = pidOffset.calculate(lastOffset, limelightOffsetTarget.getAsDouble());
             achievedOffset = pidOffset.atSetpoint();
