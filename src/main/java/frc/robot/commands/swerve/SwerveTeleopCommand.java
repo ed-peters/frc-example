@@ -53,7 +53,7 @@ public class SwerveTeleopCommand extends Command {
 
     @Override
     public void initialize() {
-        targetHeading = Double.NaN;
+        targetHeading = drive.getHeading().getDegrees();
         lastDrift = Double.NaN;
         lastCorrection = Double.NaN;
         Util.log("[swerve] entering teleop");
@@ -149,6 +149,7 @@ public class SwerveTeleopCommand extends Command {
         }
     }
 
+    @Override
     public void end(boolean interrupted) {
         targetHeading = Double.NaN;
         lastDrift = Double.NaN;

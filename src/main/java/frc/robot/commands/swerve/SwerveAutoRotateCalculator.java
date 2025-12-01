@@ -64,6 +64,10 @@ public class SwerveAutoRotateCalculator {
             return;
         }
 
+        Util.log("[swerve-pose] rotation required from %s to %s",
+                startPose.getRotation(),
+                finalPose.getRotation());
+
         // calculate current and final state; note that we don't wrap the
         // final state at 180 degrees - the motion profile calculates
         // a straight line and doesn't do "wraparound" like a PID controller
@@ -75,7 +79,9 @@ public class SwerveAutoRotateCalculator {
         profile = new TrapezoidProfile(new Constraints(
                 rotateMaxVelocity.getAsDouble(),
                 rotateMaxAcceleration.getAsDouble()));
-
+        
+        // reset PID calculations
+        Util.resetPid(pid, rotateP, rotateMaxFeedback, rotateTolerance);
     }
 
     public AutoRotation calculate(Pose2d currentPose, double time) {

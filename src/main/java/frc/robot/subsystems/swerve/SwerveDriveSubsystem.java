@@ -11,8 +11,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
-// import frc.robot.commands.swerve.SwerveAutoRotateCommand;
-// import frc.robot.commands.swerve.SwerveAutoTranslateCommand;
+import frc.robot.commands.swerve.SwerveAutoRotateCommand;
 import frc.robot.util.Util;
 import frc.robot.commands.swerve.SwerveTeleopCommand;
 
@@ -58,6 +57,7 @@ public class SwerveDriveSubsystem extends SubsystemBase {
         this.currentCommand = "";
 
         SmartDashboard.putData("SwerveDriveSubsystem", builder -> {
+            builder.addStringProperty("CurrentCommand", () -> currentCommand, null);
             builder.addDoubleProperty("GyroHeading", () -> latestGyroHeading.getDegrees(), null);
             builder.addDoubleProperty("PoseX", () -> Units.metersToFeet(latestPoseEstimate.getX()), null);
             builder.addDoubleProperty("PoseY", () -> Units.metersToFeet(latestPoseEstimate.getY()), null);
@@ -202,17 +202,16 @@ public class SwerveDriveSubsystem extends SubsystemBase {
 
         // we'll use a proxy command so it picks up the latest tuning
         // properties every time it runs
-        // return Commands.deferredProxy(() -> new SwerveAutoRotateCommand(this, angle));
-        throw new UnsupportedOperationException();
+        return new SwerveAutoRotateCommand(this, angle);
     }
 
-    /** @return a command to drive to a relative offset of the current position */
-    public Command driveToOffsetCommand(Translation2d offset) {
-
-        // we'll use a proxy command so it picks up the latest tuning
-        // properties every time it runs
-        // return Commands.deferredProxy(() -> new SwerveAutoTranslateCommand(this, offset));
-        throw new UnsupportedOperationException();
+    /** @return a command to make a relative rotation */
+    public Command rotateBy(Rotation2d rotation) {
+        return defer(() -> {
+            Rotation2d oldHeading = getHeading();
+            Rotation2d newHeading = oldHeading.plus(rotation);
+            return new SwerveAutoRotateCommand(this, newHeading);
+        });
     }
 
     /** @return a command to set the pose to 0 */

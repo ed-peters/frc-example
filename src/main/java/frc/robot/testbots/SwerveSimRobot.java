@@ -42,7 +42,7 @@ public class SwerveSimRobot extends TimedRobot {
         controller.b().onTrue(drive.alignToWallCommand(Direction.EAST));
 
         // test driving to a fixed offset from current position
-        controller.x().onTrue(drive.driveToOffsetCommand(new Translation2d(36.0, 72.0)));
+        // controller.x().onTrue(drive.driveToOffsetCommand(new Translation2d(36.0, 72.0)));
 
         // test the multi-stage targeting logic
         controller.y().onTrue(new ThreeStageTargetingCommand(drive, limelight, () -> null));

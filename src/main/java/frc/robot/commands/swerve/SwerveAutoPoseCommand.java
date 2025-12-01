@@ -49,13 +49,15 @@ public class SwerveAutoPoseCommand extends Command {
     @Override
     public void initialize() {
 
-        // capture the starting pose in meters, then calculate trajectories
+        // capture the starting pose in meters
         startPose = drive.getPose();
-        translate.initialize(startPose, finalPose);
-        rotate.initialize(startPose, finalPose);
 
         // log what we're about to do
         Util.log("[swerve-pose] heading for %s", finalPose);
+
+        // calculate trajectories
+        translate.initialize(startPose, finalPose);
+        rotate.initialize(startPose, finalPose);
 
         // start timing
         timer.restart();
@@ -76,10 +78,11 @@ public class SwerveAutoPoseCommand extends Command {
         // we combine the speed portion into ChassisSpeeds for driving (this
         // is like a "feedforward" term - if we could follow this perfectly
         // we would be exactly on track)
-        ChassisSpeeds speeds = new ChassisSpeeds(
+        ChassisSpeeds speeds = ChassisSpeeds.fromFieldRelativeSpeeds(new ChassisSpeeds(
             tx.speedX,
             tx.speedY,
-            rx.speed.getRadians());
+            0.0 // rx.speed.getRadians()
+        ), currentPose.getRotation());
 
         // we combine the position portions into a pose for visualization (the
         // individual calculators handle feedback)

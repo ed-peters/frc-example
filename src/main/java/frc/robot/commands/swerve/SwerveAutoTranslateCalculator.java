@@ -89,6 +89,10 @@ public class SwerveAutoTranslateCalculator {
             return;
         }
 
+        Util.log("[swerve-pose] translation required from %s to %s",
+                startPose.getTranslation(),
+                finalPose.getTranslation());
+
         // these will represent the start and end state of a movement along
         // the straight line between the start and end pose; we're still in
         // feet here
@@ -109,6 +113,9 @@ public class SwerveAutoTranslateCalculator {
         cos = angle.getCos();
         sin = angle.getSin();
 
+        // reset PID calculations
+        Util.resetPid(pidX, translateP, translateMaxFeedback, translateTolerance);
+        Util.resetPid(pidY, translateP, translateMaxFeedback, translateTolerance);
     }
 
     public AutoTranslation calculate(Pose2d currentPose, double time) {
@@ -141,7 +148,6 @@ public class SwerveAutoTranslateCalculator {
         // calculation for this movement); this will be in feet for now
         double speedX = nextState.velocity * cos;
         double speedY = nextState.velocity * sin;
-        System.err.println(speedX);
 
         // this calculates how far away we are from the "ideal" position
         // we just identified; since we're using Pose2d calculations, this
