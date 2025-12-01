@@ -10,9 +10,12 @@ import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
-import frc.robot.subsystems.swerve.SwerveDriveSubsystem;
+import edu.wpi.first.wpilibj2.command.Subsystem;
 import frc.robot.util.MotionProfile;
 import frc.robot.util.Util;
+
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import static frc.robot.commands.swerve.SwerveAutoConfig.rotateD;
 import static frc.robot.commands.swerve.SwerveAutoConfig.rotateMaxAcceleration;
@@ -47,10 +50,14 @@ import static frc.robot.commands.swerve.SwerveAutoConfig.translateTolerance;
  * during execution. Neither is required - you can rotate without translating
  * (e.g. to align to a target heading), or translate without rotating (e.g. to
  * "scoot" to a fixed offset).</p>
+ *
+ * This command is implemented so it doesn't depend on a specific swerve
+ * drive implementation.</p>
  */
 public class SwerveAutoPoseCommand extends Command {
 
-    final SwerveDriveSubsystem drive;
+    final Supplier<Pose2d> poseSupplier;
+    final Consumer<ChassisSpeeds> speedConsumer;
     final Pose2d finalPose;
     final MotionProfile rotationProfile;
     final MotionProfile translationProfile;
@@ -64,8 +71,12 @@ public class SwerveAutoPoseCommand extends Command {
     double cos;
     double sin;
 
-    public SwerveAutoPoseCommand(SwerveDriveSubsystem drive, Pose2d finalPose) {
-        this.drive = drive;
+    public SwerveAutoPoseCommand(Subsystem subsystem,
+                                 Supplier<Pose2d> poseSupplier,
+                                 Consumer<ChassisSpeeds> speedConsumer,
+                                 Pose2d finalPose) {
+        this.poseSupplier = poseSupplier;
+        this.speedConsumer = speedConsumer;
         this.finalPose = finalPose;
         this.rotationProfile = new MotionProfile();
         this.translationProfile = new MotionProfile();
@@ -73,7 +84,10 @@ public class SwerveAutoPoseCommand extends Command {
         this.pidY = new PIDController(translateP.getAsDouble(), 0, translateD.getAsDouble());
         this.pidOmega = new PIDController(rotateP.getAsDouble(), 0, rotateD.getAsDouble());
         this.timer = new Timer();
+
         pidOmega.enableContinuousInput(-180.0, 180.0);
+
+        addRequirements(subsystem);
     }
 
     // ===============================================================
@@ -85,7 +99,7 @@ public class SwerveAutoPoseCommand extends Command {
 
         // calculate starting pose and prepare for the rotation and translation
         // components of our movement
-        startPose = drive.getPose();
+        startPose = poseSupplier.get();
         initializeRotation(startPose);
         initializeTranslation(startPose);
 
@@ -175,7 +189,7 @@ public class SwerveAutoPoseCommand extends Command {
     @Override
     public void execute() {
 
-        Pose2d currentPose = drive.getPose();
+        Pose2d currentPose = poseSupplier.get();
 
         // calculate the desired rotation and translation
         DesiredRotation desiredRotation = calculateRotation(
@@ -212,7 +226,7 @@ public class SwerveAutoPoseCommand extends Command {
         Util.publishPose("AutoPoseFinal", finalPose);
 
         // make it so!
-        drive.drive("rotate", speeds);
+        speedConsumer.accept(speeds);
     }
 
     private DesiredRotation calculateRotation(Pose2d currentPose, double time) {
@@ -308,7 +322,7 @@ public class SwerveAutoPoseCommand extends Command {
     @Override
     public void end(boolean interrupted) {
 
-        Pose2d currentPose = drive.getPose();
+        Pose2d currentPose = poseSupplier.get();
         Rotation2d currentHeading = currentPose.getRotation();
 
         // since we determine completion based on the timing of the motion

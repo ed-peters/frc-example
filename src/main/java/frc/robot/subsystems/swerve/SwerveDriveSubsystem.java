@@ -7,19 +7,12 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
-import frc.robot.commands.swerve.SwerveAutoPoseCommand;
 import frc.robot.util.Util;
-import frc.robot.commands.swerve.SwerveTeleopCommand;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
-import java.util.function.DoubleSupplier;
-import java.util.function.Supplier;
 
 import static frc.robot.subsystems.swerve.SwerveConfig.kinematics;
 
@@ -150,79 +143,5 @@ public class SwerveDriveSubsystem extends SubsystemBase {
         poseCalculator.calculateLatestPoses();
         latestGyroHeading = chassis.getGyroHeading();
         latestPoseEstimate = poseCalculator.getPoseEstimate();
-    }
-
-    // ========================================================
-    // COMMANDS
-    // ========================================================
-
-    /** @return a teleop command for this drive and controller */
-    public Command teleopCommand(CommandXboxController controller) {
-        return SwerveTeleopCommand.create(this, controller);
-    }
-
-    /** @return a command to rotate the robot around a point on the field */
-    public Command rotateAroundPointCommand(Supplier<Pose2d> pointSupplier,
-                                            DoubleSupplier speedSupplier) {
-
-        // we'll use a proxy command because we need to calculate the
-        // center of rotation each time we run the command
-        return Commands.deferredProxy(() -> {
-
-            // the center of rotation is the difference between the target
-            // point and the current pose
-            Pose2d point = pointSupplier.get();
-            Translation2d centerOfRotation = point
-                    .minus(getPose())
-                    .getTranslation();
-
-            Util.log("[swerve] rotating around point = %s; COR = %s",
-                    point,
-                    centerOfRotation);
-
-            return run(() -> {
-                drive(
-                        "rotate",
-                        new ChassisSpeeds(0.0, 0.0, speedSupplier.getAsDouble()),
-                        centerOfRotation);
-            });
-        });
-    }
-
-    /** @return a command to align the robot to an arena wall */
-    public Command alignToWallCommand(Direction direction) {
-
-        // we can determine the angle from the direction once here
-        Rotation2d angle = switch (direction) {
-            case NORTH -> Rotation2d.fromDegrees(90.0);
-            case SOUTH -> Rotation2d.fromDegrees(-90.0);
-            case EAST -> Rotation2d.fromDegrees(0.0);
-            case WEST -> Rotation2d.fromDegrees(180.0);
-        };
-
-        return defer(() -> {
-            Pose2d oldPose = getPose();
-            Pose2d newPose = new Pose2d(oldPose.getTranslation(), angle);
-            return driveTo(newPose);
-        });
-    }
-
-    /** @return a command to make a relative rotation */
-    public Command rotateBy(Rotation2d rotation) {
-        return defer(() -> {
-            Pose2d oldPose = getPose();
-            Pose2d newPose = new Pose2d(oldPose.getTranslation(), oldPose.getRotation().plus(rotation));
-            return driveTo(newPose);
-        });
-    }
-
-    /** @return a command to make a relative rotation */
-    public Command driveTo(Pose2d pose) {
-        return new SwerveAutoPoseCommand(this, pose);
-    }
-
-    /** @return a command to set the pose to 0 */
-    public Command zeroPoseCommand() {
-        return runOnce(() -> resetPose(Util.ZERO_POSE));
     }
 }

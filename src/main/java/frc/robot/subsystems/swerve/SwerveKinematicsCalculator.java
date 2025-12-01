@@ -30,7 +30,9 @@ public class SwerveKinematicsCalculator {
 
         // perform the normal kinematic calculations to determine the desired
         // speed and angle for each module
-        SwerveModuleState [] states = kinematics.toSwerveModuleStates(speeds, centerOfRotation);
+        SwerveModuleState [] states = kinematics.toSwerveModuleStates(
+                speeds,
+                centerOfRotation);
 
         // this will scale speeds down so no single wheel is ever turning
         // faster than the absolute maximum speed (but keep the ratio of
