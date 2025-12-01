@@ -91,6 +91,13 @@ public class Util {
     }
 
     /**
+     * @return the distance between the two poses
+     */
+    public static double distanceBetween(Pose2d start, Pose2d end) {
+        return start.minus(end).getTranslation().getNorm();
+    }
+
+    /**
      * @return a new supplier that returns true when the original supplier
      * (a) returned true last time and (b) returns false this time (this
      * captures a "falling edge", for example when a button was pressed and
