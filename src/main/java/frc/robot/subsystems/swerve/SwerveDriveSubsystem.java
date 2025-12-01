@@ -38,7 +38,7 @@ public class SwerveDriveSubsystem extends SubsystemBase {
 
     final SwerveChassis chassis;
     final SwervePoseCalculator poseCalculator;
-    final SwerveKinematicsCalculator stateCalculator;
+    final SwerveKinematicsCalculator kinematicsCalculator;
     final List<Consumer<Pose2d>> poseResetListeners;
     Rotation2d latestGyroHeading;
     Pose2d latestPoseEstimate;
@@ -49,7 +49,7 @@ public class SwerveDriveSubsystem extends SubsystemBase {
 
         this.chassis = chassis;
         this.poseCalculator = new SwervePoseCalculator(chassis, Util.ZERO_POSE);
-        this.stateCalculator = new SwerveKinematicsCalculator(chassis);
+        this.kinematicsCalculator = new SwerveKinematicsCalculator(chassis);
         this.poseResetListeners = new ArrayList<>();
         this.latestSpeeds = Util.NAN_SPEED;
         this.latestGyroHeading = chassis.getGyroHeading();
@@ -137,7 +137,7 @@ public class SwerveDriveSubsystem extends SubsystemBase {
     public void drive(String command, ChassisSpeeds speeds, Translation2d centerOfRotation) {
         currentCommand = command;
         latestSpeeds = speeds;
-        chassis.setModuleStates(stateCalculator.calculateStates(
+        chassis.setModuleStates(kinematicsCalculator.calculateStates(
                 speeds,
                 centerOfRotation));
     }

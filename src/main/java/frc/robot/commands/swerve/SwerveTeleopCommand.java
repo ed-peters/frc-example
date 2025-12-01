@@ -95,7 +95,7 @@ public class SwerveTeleopCommand extends Command {
         // the opposite side (so going away from them is -X on the
         // field, and to their left is -Y)
         else {
-            fieldRelativeSpeeds= new ChassisSpeeds(
+            fieldRelativeSpeeds = new ChassisSpeeds(
                     -incomingSpeeds.vxMetersPerSecond,
                     -incomingSpeeds.vyMetersPerSecond,
                     incomingSpeeds.omegaRadiansPerSecond);

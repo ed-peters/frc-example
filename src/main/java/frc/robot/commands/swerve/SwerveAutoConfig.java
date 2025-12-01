@@ -11,23 +11,17 @@ import static frc.robot.util.Util.pref;
  */
 public class SwerveAutoConfig {
 
-    /**
-     * Implements a "quiet mode" to prevent spamming the dashboard during
-     * competition once you have stuff well-tuned
-     */
-    public static final boolean enableLogging = true;
-
     // ==================================================================
     // ROTATING
     // ==================================================================
 
     /**
-     * Maximum velocity and acceleration for auto rotation in degrees per
+     * Maximum velocity and acceleration for autorotation in degrees per
      * second; when acceleration is twice velocity we will reach top speed
      * in 0.5s
      */
-    public static DoubleSupplier rotateMaxVelocity = pref("SwerveAutoRotate/MaxVelocity", 360.0);
-    public static DoubleSupplier rotateMaxAcceleration = pref("SwerveAutoRotate/MaxAcceleration", 720.0);
+    public static DoubleSupplier rotateMaxVelocity = pref("SwerveAutoRotate/MaxVelocity", 720.0);
+    public static DoubleSupplier rotateMaxAcceleration = pref("SwerveAutoRotate/MaxAcceleration", 1440.0);
 
     /**
      * Feedback constants for angle correction during auto rotation
@@ -51,8 +45,8 @@ public class SwerveAutoConfig {
      * second; when acceleration is twice velocity we will reach top speed
      * in 0.5s
      */
-    public static DoubleSupplier translateMaxVelocity = pref("SwerveAutoTranslate/MaxVelocity", 4.0);
-    public static DoubleSupplier translateMaxAcceleration = pref("SwerveAutoTranslate/MaxAcceleration", 8.0);
+    public static DoubleSupplier translateMaxVelocity = pref("SwerveAutoTranslate/MaxVelocity", 15.0);
+    public static DoubleSupplier translateMaxAcceleration = pref("SwerveAutoTranslate/MaxAcceleration", 30.0);
 
     /**
      * Feedback constants for position correction during auto translation

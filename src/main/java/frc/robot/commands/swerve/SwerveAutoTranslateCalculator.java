@@ -4,7 +4,6 @@ import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform2d;
-import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.math.trajectory.TrapezoidProfile.Constraints;
 import edu.wpi.first.math.trajectory.TrapezoidProfile.State;
@@ -18,10 +17,41 @@ import static frc.robot.commands.swerve.SwerveAutoConfig.translateMaxVelocity;
 import static frc.robot.commands.swerve.SwerveAutoConfig.translateP;
 import static frc.robot.commands.swerve.SwerveAutoConfig.translateTolerance;
 
+/**
+ * Calculates the X/Y portion of moving the chassis to a specific point.
+ * We start by projecting a straight line between the start and final
+ * positions. Then we calculate a trajectory along that line with a
+ * trapezoid motion profile, for smooth acceleration and braking.
+ * </p>
+ *
+ * Pay particular attention to units here - our preferences are stored in
+ * feet, so we do our calculation in feet and translate to meters only when
+ * necessary.
+ * </p>
+ */
 public class SwerveAutoTranslateCalculator {
-    
-    public record AutoTranslation(Translation2d speeds, Translation2d pose) {
 
+    /**
+     * This represents the calculation of one "step" in the translation
+     * movement. It holds the position (in meters) and speed (in meters
+     * per second) of the chassis at a particular moment in time.
+     */
+    public static class AutoTranslation {
+
+        final double positionX;
+        final double positionY;
+        final double speedX;
+        final double speedY;
+
+        public AutoTranslation(double positionX,
+                               double positionY,
+                               double speedX,
+                               double speedY) {
+            this.positionX = positionX;
+            this.positionY = positionY;
+            this.speedX = speedX;
+            this.speedY = speedY;
+        }
     }
 
     final PIDController pidX;
@@ -46,9 +76,9 @@ public class SwerveAutoTranslateCalculator {
         this.finalPose = finalPose;
 
         // if the total distance between the start and the end pose is
-        // too small, we won't bother with any of this
-        // TODO - what units should this be in?
-        distance = Util.distanceBetween(startPose, finalPose);
+        // too small, we won't bother with any of this; we'll calculate
+        // distance as feet here and continue in those units
+        distance = Util.feetBetween(startPose, finalPose);
         if (distance < translateTolerance.getAsDouble()) {
             startState = Util.NAN_STATE;
             finalState = Util.NAN_STATE;
@@ -60,21 +90,21 @@ public class SwerveAutoTranslateCalculator {
         }
 
         // these will represent the start and end state of a movement along
-        // the straight line between the start and end pose
-        // TODO these will be in the same units as above
+        // the straight line between the start and end pose; we're still in
+        // feet here
         startState = new State(0.0, 0.0);
         finalState = new State(distance, 0.0);
 
         // this will calculate a motion profile along that straight line,
-        // with smooth acceleration and deceleration
-        // TODO these will be in the same units as above
+        // with smooth acceleration and deceleration; also still in feet
         profile = new TrapezoidProfile(new Constraints(
-                Units.feetToMeters(translateMaxVelocity.getAsDouble()),
-                Units.feetToMeters(translateMaxAcceleration.getAsDouble())));
+                translateMaxVelocity.getAsDouble(),
+                translateMaxAcceleration.getAsDouble()));
 
         // once we know the angle of movement relative to the robot's
         // current heading, the cos and sin of the angle will help us
-        // calculate the X and Y components of the movement
+        // calculate the X and Y components of the movement (these are
+        // just ratios; they have no associated dimension)
         Rotation2d angle = finalPose.minus(startPose).getTranslation().getAngle();
         cos = angle.getCos();
         sin = angle.getSin();
@@ -85,48 +115,59 @@ public class SwerveAutoTranslateCalculator {
 
         // if we're not translating, there is nothing to do
         if (profile == null) {
-            return new AutoTranslation(Translation2d.kZero, startPose.getTranslation());
+            return new AutoTranslation(
+                    startPose.getX(),
+                    startPose.getY(),
+                    0.0, 0.0);
         }
 
-        // this will give us the current distance and speed along our line
-        // TODO these will be in the same units as above
+        // otherwise, this will give us the "ideal" distance and speed (along
+        // the line between the start and final points) at this moment in time;
+        // both are in feet
         State nextState = profile.calculate(
                 time,
                 startState,
                 finalState);
 
-        // this calculates the corresponding field position (we will ignore
-        // rotation for this calculation)
-        // TODO this will be in meters
+        // this calculates where that is on the field; Pose2d expects
+        // distance in meters so we convert here
         Pose2d nextPose = startPose.transformBy(new Transform2d(
-                nextState.position * cos,
-                nextState.position * sin,
+                Units.feetToMeters(nextState.position * cos),
+                Units.feetToMeters(nextState.position * sin),
                 Util.ZERO_ROTATION));
 
-        // this is how fast we should be moving along the straight line from
-        // start position to final position, based only on our motion profile
-        // (this is basically our "feedforward")
-        // TODO probably need a unit conversion here
+        // our starting estimate for velocity in X/Y directions is the ideal
+        // velocity we just calculated (this is basically the "feedforward"
+        // calculation for this movement); this will be in feet for now
         double speedX = nextState.velocity * cos;
         double speedY = nextState.velocity * sin;
+        System.err.println(speedX);
 
-        // this calculates where we should be on the field, and an error
-        // from the current position; that will allow us to add in an
-        // adjustment to speed (this is our "feedback")
-        // TODO should this be in meters?
+        // this calculates how far away we are from the "ideal" position
+        // we just identified; since we're using Pose2d calculations, this
+        // is in meters
         Transform2d poseError = nextPose.minus(currentPose);
+
+        // this converts our pose error to feet and calculates positional
+        // "feedback" in the X/Y directions
         speedX += Util.applyClamp(
-                pidX.calculate(0.0, poseError.getX()),
+                pidX.calculate(0.0, Units.metersToFeet(poseError.getX())),
                 translateMaxFeedback);
         speedY += Util.applyClamp(
-                pidY.calculate(0.0, poseError.getY()),
+                pidY.calculate(0.0, Units.metersToFeet(poseError.getY())),
                 translateMaxFeedback);
 
+        // we return both position and speed in meters per second
         return new AutoTranslation(
-                new Translation2d(speedX, speedY),
-                nextPose.getTranslation());
+                nextPose.getX(),
+                nextPose.getY(),
+                Units.feetToMeters(speedX),
+                Units.feetToMeters(speedY));
     }
 
+    /**
+     * Our motion profile determines how fast the movement will be
+     */
     public double totalTime() {
         return profile == null ? 0.0 : profile.totalTime();
     }

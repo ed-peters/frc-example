@@ -6,7 +6,6 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.trajectory.TrapezoidProfile;
 import edu.wpi.first.math.trajectory.TrapezoidProfile.Constraints;
 import edu.wpi.first.math.trajectory.TrapezoidProfile.State;
-import edu.wpi.first.math.util.Units;
 import frc.robot.util.Util;
 
 import static frc.robot.commands.swerve.SwerveAutoConfig.rotateD;
@@ -16,10 +15,26 @@ import static frc.robot.commands.swerve.SwerveAutoConfig.rotateMaxVelocity;
 import static frc.robot.commands.swerve.SwerveAutoConfig.rotateP;
 import static frc.robot.commands.swerve.SwerveAutoConfig.rotateTolerance;
 
+/**
+ * This calculates rotation to a target heading by using a trapezoid motion
+ * profile to ensure smooth acceleration and braking.
+ */
 public class SwerveAutoRotateCalculator {
-    
-    public record AutoRotation(Rotation2d speed, Rotation2d heading) {
 
+    /**
+     * This represents the calculation of one "step" in the rotation
+     * movement. It holds the heading and rotational speed of the chassis
+     * at a particular moment in time.
+     */
+    public static class AutoRotation {
+
+        public final Rotation2d speed;
+        public final Rotation2d heading;
+
+        public AutoRotation(Rotation2d speed, Rotation2d heading) {
+            this.heading = heading;
+            this.speed = speed;
+        }
     }
 
     final PIDController pid;
@@ -40,7 +55,7 @@ public class SwerveAutoRotateCalculator {
 
         // this calculates the distance in degrees; using "minus" here should
         // automatically send us the shortest way around
-        double deltaDegrees = finalHeading.minus(startHeading).getDegrees();
+        double deltaDegrees = Math.abs(finalHeading.minus(startHeading).getDegrees());
         if (deltaDegrees < rotateTolerance.getAsDouble()) {
             startState = Util.NAN_STATE;
             finalState = Util.NAN_STATE;
@@ -51,45 +66,48 @@ public class SwerveAutoRotateCalculator {
 
         // calculate current and final state; note that we don't wrap the
         // final state at 180 degrees - the motion profile calculates
-        // TODO these will be in the same units as above
+        // a straight line and doesn't do "wraparound" like a PID controller
         startState = new State(startHeading.getDegrees(), 0.0);
         finalState = new State(startHeading.getDegrees() + deltaDegrees, 0.0);
 
         // this will calculate a motion profile around the circle with smooth
-        // acceleration and deceleration
-        // TODO these will be in the same units as above
+        // acceleration and deceleration (units are degrees)
         profile = new TrapezoidProfile(new Constraints(
-                Units.feetToMeters(rotateMaxVelocity.getAsDouble()),
-                Units.feetToMeters(rotateMaxAcceleration.getAsDouble())));
+                rotateMaxVelocity.getAsDouble(),
+                rotateMaxAcceleration.getAsDouble()));
 
     }
 
     public AutoRotation calculate(Pose2d currentPose, double time) {
 
+        // if we're not rotating, there is nothing to do
         if (profile == null) {
             return new AutoRotation(Rotation2d.kZero, startHeading);
         }
 
         // the main component of our velocity is going to be provided by
-        // the calculated motion profile
-        // TODO this will be in the same units as above; note unit conversion
+        // the calculated motion profile; this is calculated in degrees
         State nextState = profile.calculate(time, startState, finalState);
+
+        // this is the ideal speed of rotation (this is like "feedforward"
+        // and will be in degrees)
         double speed = nextState.velocity;
 
-        // we are also going to calculate feedback based on where we are
+        // we are also going to calculate "feedback" based on where we are
         // now compared to where we're supposed to be
-        // TODO should this be in degrees?
         speed += Util.applyClamp(
-                pid.calculate(currentPose.getRotation().getRadians(), nextState.position),
+                pid.calculate(currentPose.getRotation().getDegrees(), nextState.position),
                 rotateMaxFeedback);
 
-        // TODO note use of plus and unit transform
         return new AutoRotation(
                 Rotation2d.fromDegrees(speed),
                 Rotation2d.fromDegrees(nextState.position));
 
     }
 
+    /**
+     * Our motion profile determines how fast the movement will be
+     */
     public double totalTime() {
         return profile == null ? 0.0 : profile.totalTime();
     }

@@ -91,10 +91,10 @@ public class Util {
     }
 
     /**
-     * @return the distance between the two poses
+     * @return the distance between the two poses in feet
      */
-    public static double distanceBetween(Pose2d start, Pose2d end) {
-        return start.minus(end).getTranslation().getNorm();
+    public static double feetBetween(Pose2d start, Pose2d end) {
+        return Units.metersToFeet(start.minus(end).getTranslation().getNorm());
     }
 
     /**

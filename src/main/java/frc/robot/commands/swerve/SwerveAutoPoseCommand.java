@@ -1,6 +1,7 @@
 package frc.robot.commands.swerve;
 
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.Timer;
@@ -18,11 +19,13 @@ import static frc.robot.commands.swerve.SwerveAutoConfig.translateTolerance;
  * This command will drive the robot to a fixed pose on the field. It is
  * capable of handling both translation (moving to a specific X/Y point)
  * and rotating (orienting to a specific heading). It can be configured
- * with only translation, only rotation or both.</p>
+ * with only translation, only rotation or both.
+ * </p>
  *
  * Calculating the trajectory for translation and rotation is done
  * independently by the {@link SwerveAutoTranslateCalculator} and
  * {@link SwerveAutoRotateCalculator}, respectively.
+ * </p>
  */
 public class SwerveAutoPoseCommand extends Command {
 
@@ -46,7 +49,7 @@ public class SwerveAutoPoseCommand extends Command {
     @Override
     public void initialize() {
 
-        // capture the starting pose, then calculate trajectories
+        // capture the starting pose in meters, then calculate trajectories
         startPose = drive.getPose();
         translate.initialize(startPose, finalPose);
         rotate.initialize(startPose, finalPose);
@@ -66,7 +69,7 @@ public class SwerveAutoPoseCommand extends Command {
         double time = timer.get();
 
         // these tell us what the speed and position of the chassis should be
-        // at this point in the movement
+        // at this point in the movement (translation will be in meters)
         AutoTranslation tx = translate.calculate(currentPose, time);
         AutoRotation rx = rotate.calculate(currentPose, time);
 
@@ -74,18 +77,18 @@ public class SwerveAutoPoseCommand extends Command {
         // is like a "feedforward" term - if we could follow this perfectly
         // we would be exactly on track)
         ChassisSpeeds speeds = new ChassisSpeeds(
-            tx.speeds().getX(),
-            tx.speeds().getY(),
-            rx.speed().getRadians());
+            tx.speedX,
+            tx.speedY,
+            rx.speed.getRadians());
 
         // we combine the position portions into a pose for visualization (the
         // individual calculators handle feedback)
         Pose2d nextPose = new Pose2d(
-            tx.pose().getX(),
-            tx.pose().getY(),
-            rx.heading());
+            tx.positionX,
+            tx.positionY,
+            rx.heading);
 
-        // log stuff to dashboard
+        // log stuff to dashboard (for that we will use feet/degrees)
         SmartDashboard.putNumber("SwerveAutoTranslateCommand/SpeedX", Units.metersToFeet(speeds.vxMetersPerSecond));
         SmartDashboard.putNumber("SwerveAutoTranslateCommand/SpeedY", Units.metersToFeet(speeds.vyMetersPerSecond));
         SmartDashboard.putNumber("SwerveAutoTranslateCommand/SpeedOmega", Math.toDegrees(speeds.omegaRadiansPerSecond));
@@ -117,16 +120,32 @@ public class SwerveAutoPoseCommand extends Command {
         // an obstacle or something, or it might be a sign that our tuning is
         // off and needs to be adjusted; we'll log failure here
 
-        double distance = Util.distanceBetween(currentPose, finalPose);
+        // translation tolerance is specified in feet
+        double distance = Util.feetBetween(currentPose, finalPose);
         if (distance > translateTolerance.getAsDouble()) {
             Util.log("[swerve-pose] !!! FAILED TO TRANSLATE - distance is %.2f", distance);
         }
 
-        double degreeDelta = currentPose.getRotation().minus(finalPose.getRotation()).getDegrees();
+        // rotational tolerance is specified in degrees
+        double degreeDelta = Math.abs(currentPose
+                .getRotation()
+                .minus(finalPose.getRotation())
+                .getDegrees());
         if (degreeDelta > rotateTolerance.getAsDouble()) {
             Util.log("[swerve-pose] !!! FAILED TO ROTATE - delta is %.2f", degreeDelta);
         }
 
         SmartDashboard.putBoolean("SwerveAutoTranslateCommand/Running?", false);
+    }
+
+    /**
+     * @return a command that, when run, will calculate a target position
+     * by transforming the drive's current position, and then drive there
+     */
+    public static Command fromTransform(SwerveDriveSubsystem drive,
+                                        Transform2d transform) {
+        return drive.defer(() -> new SwerveAutoPoseCommand(
+                drive,
+                drive.getPose().transformBy(transform)));
     }
 }
