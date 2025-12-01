@@ -11,7 +11,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
-import frc.robot.commands.swerve.SwerveAutoRotateCommand;
+import frc.robot.commands.swerve.SwerveAutoPoseCommand;
 import frc.robot.util.Util;
 import frc.robot.commands.swerve.SwerveTeleopCommand;
 
@@ -200,18 +200,25 @@ public class SwerveDriveSubsystem extends SubsystemBase {
             case WEST -> Rotation2d.fromDegrees(180.0);
         };
 
-        // we'll use a proxy command so it picks up the latest tuning
-        // properties every time it runs
-        return new SwerveAutoRotateCommand(this, angle);
+        return defer(() -> {
+            Pose2d oldPose = getPose();
+            Pose2d newPose = new Pose2d(oldPose.getTranslation(), angle);
+            return driveTo(newPose);
+        });
     }
 
     /** @return a command to make a relative rotation */
     public Command rotateBy(Rotation2d rotation) {
         return defer(() -> {
-            Rotation2d oldHeading = getHeading();
-            Rotation2d newHeading = oldHeading.plus(rotation);
-            return new SwerveAutoRotateCommand(this, newHeading);
+            Pose2d oldPose = getPose();
+            Pose2d newPose = new Pose2d(oldPose.getTranslation(), oldPose.getRotation().plus(rotation));
+            return driveTo(newPose);
         });
+    }
+
+    /** @return a command to make a relative rotation */
+    public Command driveTo(Pose2d pose) {
+        return new SwerveAutoPoseCommand(this, pose);
     }
 
     /** @return a command to set the pose to 0 */

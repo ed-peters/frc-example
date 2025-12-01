@@ -4,6 +4,7 @@
 
 package frc.robot.testbots;
 
+import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
@@ -39,6 +40,7 @@ public class SwerveAutoSimRobot extends TimedRobot {
 
         controller.a().onTrue(drive.alignToWallCommand(Direction.NORTH));
         controller.b().onTrue(drive.rotateBy(Rotation2d.fromDegrees(15.0)));
+        controller.x().onTrue(drive.driveTo(new Pose2d(2.0, 1.0, Rotation2d.fromDegrees(30.0))));
 
         /*
         // drives to a position one meter in front of, and two meters to the

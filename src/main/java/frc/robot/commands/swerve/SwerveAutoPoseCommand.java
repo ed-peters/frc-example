@@ -1,154 +1,346 @@
 package frc.robot.commands.swerve;
 
+import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Transform2d;
+import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.math.trajectory.TrapezoidProfile.State;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
-import frc.robot.commands.swerve.SwerveAutoRotateCalculator.AutoRotation;
-import frc.robot.commands.swerve.SwerveAutoTranslateCalculator.AutoTranslation;
 import frc.robot.subsystems.swerve.SwerveDriveSubsystem;
+import frc.robot.util.MotionProfile;
 import frc.robot.util.Util;
 
+import static frc.robot.commands.swerve.SwerveAutoConfig.rotateD;
+import static frc.robot.commands.swerve.SwerveAutoConfig.rotateMaxAcceleration;
+import static frc.robot.commands.swerve.SwerveAutoConfig.rotateMaxFeedback;
+import static frc.robot.commands.swerve.SwerveAutoConfig.rotateMaxVelocity;
+import static frc.robot.commands.swerve.SwerveAutoConfig.rotateP;
 import static frc.robot.commands.swerve.SwerveAutoConfig.rotateTolerance;
+import static frc.robot.commands.swerve.SwerveAutoConfig.translateD;
+import static frc.robot.commands.swerve.SwerveAutoConfig.translateMaxAcceleration;
+import static frc.robot.commands.swerve.SwerveAutoConfig.translateMaxFeedback;
+import static frc.robot.commands.swerve.SwerveAutoConfig.translateMaxVelocity;
+import static frc.robot.commands.swerve.SwerveAutoConfig.translateP;
 import static frc.robot.commands.swerve.SwerveAutoConfig.translateTolerance;
 
 /**
- * This command will drive the robot to a fixed pose on the field. It is
- * capable of handling both translation (moving to a specific X/Y point)
- * and rotating (orienting to a specific heading). It can be configured
- * with only translation, only rotation or both.
- * </p>
+ * This command drives the robot to a fixed pose on the field. It handles
+ * two different aspects of movement:
+ * <ul>
  *
- * Calculating the trajectory for translation and rotation is done
- * independently by the {@link SwerveAutoTranslateCalculator} and
- * {@link SwerveAutoRotateCalculator}, respectively.
- * </p>
+ *     <li>Rotation - if the new pose has a different heading than the
+ *     starting pose when the command is run, we use a {@link MotionProfile}
+ *     to smoothly rotate to the target heading.</li>
+ *
+ *     <li>Translation - if the new pose has a different position on the field
+ *     than the starting pose when the command is run, we use a second
+ *     {@link MotionProfile} to smoothly drive along a straight line to the
+ *     target position.</li>
+ *
+ * </ul>
+ *
+ * These are independent actions and are calculated separately, then combined
+ * during execution. Neither is required - you can rotate without translating
+ * (e.g. to align to a target heading), or translate without rotating (e.g. to
+ * "scoot" to a fixed offset).</p>
  */
 public class SwerveAutoPoseCommand extends Command {
 
     final SwerveDriveSubsystem drive;
-    final SwerveAutoTranslateCalculator translate;
-    final SwerveAutoRotateCalculator rotate;
     final Pose2d finalPose;
+    final MotionProfile rotationProfile;
+    final MotionProfile translationProfile;
+    final PIDController pidX;
+    final PIDController pidY;
+    final PIDController pidOmega;
     final Timer timer;
+    boolean skipTranslation;
+    boolean skipRotation;
     Pose2d startPose;
+    double cos;
+    double sin;
 
-    public SwerveAutoPoseCommand(SwerveDriveSubsystem drive,
-                                 Pose2d finalPose) {
+    public SwerveAutoPoseCommand(SwerveDriveSubsystem drive, Pose2d finalPose) {
         this.drive = drive;
-        this.translate = new SwerveAutoTranslateCalculator();
-        this.rotate = new SwerveAutoRotateCalculator();
         this.finalPose = finalPose;
+        this.rotationProfile = new MotionProfile();
+        this.translationProfile = new MotionProfile();
+        this.pidX = new PIDController(translateP.getAsDouble(), 0, translateD.getAsDouble());
+        this.pidY = new PIDController(translateP.getAsDouble(), 0, translateD.getAsDouble());
+        this.pidOmega = new PIDController(rotateP.getAsDouble(), 0, rotateD.getAsDouble());
         this.timer = new Timer();
-        addRequirements(drive);
+        pidOmega.enableContinuousInput(-180.0, 180.0);
     }
+
+    // ===============================================================
+    // INITIALIZATION
+    // ===============================================================
 
     @Override
     public void initialize() {
 
-        // capture the starting pose in meters
+        // calculate starting pose and prepare for the rotation and translation
+        // components of our movement
         startPose = drive.getPose();
-
-        // log what we're about to do
-        Util.log("[swerve-pose] heading for %s", finalPose);
-
-        // calculate trajectories
-        translate.initialize(startPose, finalPose);
-        rotate.initialize(startPose, finalPose);
+        initializeRotation(startPose);
+        initializeTranslation(startPose);
 
         // start timing
         timer.restart();
+    }
+
+    private void initializeRotation(Pose2d startPose) {
+
+        // if we're not rotating, there's nothing to do
+        skipRotation = startPose.getRotation().equals(finalPose.getRotation());
+        if (skipRotation) {
+            return;
+        }
+
+        // we calculate a "position" around the circle based on its offset
+        // from the starting position - starting at 0 degrees and ending
+        // at the final heading. the sign of this offset may be positive or
+        // negative depending on whether we're going left or right.
+        double degrees = finalPose.getRotation()
+                        .minus(startPose.getRotation())
+                        .getDegrees();
+        rotationProfile.resetMotion(0.0, degrees);
+
+        // we use a maximum acceleration and velocity to ensure a smooth
+        // movement throughout the turn
+        rotationProfile.resetConstraints(
+                rotateMaxVelocity.getAsDouble(),
+                rotateMaxAcceleration.getAsDouble());
+
+        Util.log("[auto-pose] rotating from %s to %s",
+                startPose.getRotation(),
+                finalPose.getRotation());
+
+        // reset PID
+        Util.resetPid(pidOmega, rotateP, rotateD, rotateTolerance);
 
     }
+
+    private void initializeTranslation(Pose2d startPose) {
+
+        // if we're not translating, there's nothing to do
+        skipTranslation = startPose.getTranslation()
+                .equals(finalPose.getTranslation());
+        if (skipTranslation) {
+            return;
+        }
+
+        // this is how far (in feet) we are moving from start to final
+        // (this will always be a positive number)
+        double distance = Util.feetBetween(startPose, finalPose);
+
+        // this is the angle of line between the start and final poses; cos
+        // and sin will help us decompose straight-line movement along that
+        // line into separate X and Y components
+        Rotation2d angle = finalPose.getTranslation()
+                .minus(startPose.getTranslation())
+                .getAngle();
+        cos = angle.getCos();
+        sin = angle.getSin();
+
+        // we will plan motion along the straight line between start and final
+        translationProfile.resetMotion(
+                0.0,
+                distance);
+
+        // we use a maximum acceleration and velocity to ensure a smooth
+        // movement throughout the turn
+        translationProfile.resetConstraints(
+                translateMaxVelocity.getAsDouble(),
+                translateMaxAcceleration.getAsDouble());
+
+        Util.log("[auto-pose] translating from %s to %s",
+                startPose.getTranslation(),
+                finalPose.getTranslation());
+
+        // reset PIDs
+        Util.resetPid(pidX, translateP, translateD, translateTolerance);
+        Util.resetPid(pidY, translateP, translateD, translateTolerance);
+
+    }
+
+    // ===============================================================
+    // EXECUTION
+    // ===============================================================
 
     @Override
     public void execute() {
 
         Pose2d currentPose = drive.getPose();
-        double time = timer.get();
 
-        // these tell us what the speed and position of the chassis should be
-        // at this point in the movement (translation will be in meters)
-        AutoTranslation tx = translate.calculate(currentPose, time);
-        AutoRotation rx = rotate.calculate(currentPose, time);
+        // calculate the desired rotation and translation
+        DesiredRotation desiredRotation = calculateRotation(
+                currentPose,
+                timer.get());
+        DesiredTranslation desiredTranslation = calculateTranslation(
+                currentPose,
+                timer.get());
 
-        // we combine the speed portion into ChassisSpeeds for driving (this
-        // is like a "feedforward" term - if we could follow this perfectly
-        // we would be exactly on track)
-        ChassisSpeeds speeds = ChassisSpeeds.fromFieldRelativeSpeeds(new ChassisSpeeds(
-            tx.speedX,
-            tx.speedY,
-            0.0 // rx.speed.getRadians()
-        ), currentPose.getRotation());
+        // all these calculations assume field-relative movement, so when we
+        // calculate speed we have to convert it
+        ChassisSpeeds speeds = new ChassisSpeeds(
+                desiredTranslation.desiredSpeed.getX(),
+                desiredTranslation.desiredSpeed.getY(),
+                desiredRotation.desiredSpeed.getRadians());
+        speeds = ChassisSpeeds.fromFieldRelativeSpeeds(
+                speeds,
+                currentPose.getRotation());
 
-        // we combine the position portions into a pose for visualization (the
-        // individual calculators handle feedback)
-        Pose2d nextPose = new Pose2d(
-            tx.positionX,
-            tx.positionY,
-            rx.heading);
+        // publish some stuff to the dashboard
+        SmartDashboard.putBoolean("SwerveAutoPoseCommand/IsTranslating?", !skipTranslation);
+        SmartDashboard.putBoolean("SwerveAutoPoseCommand/IsRotating?", !skipRotation);
+        SmartDashboard.putNumber("SpeedX", Units.metersToFeet(speeds.vxMetersPerSecond));
+        SmartDashboard.putNumber("SpeedY", Units.metersToFeet(speeds.vyMetersPerSecond));
+        SmartDashboard.putNumber("SpeedOmega", Math.toDegrees(speeds.omegaRadiansPerSecond));
+        SmartDashboard.putBoolean("SwerveAutoPoseCommand/Running?", true);
 
-        // log stuff to dashboard (for that we will use feet/degrees)
-        SmartDashboard.putNumber("SwerveAutoTranslateCommand/SpeedX", Units.metersToFeet(speeds.vxMetersPerSecond));
-        SmartDashboard.putNumber("SwerveAutoTranslateCommand/SpeedY", Units.metersToFeet(speeds.vyMetersPerSecond));
-        SmartDashboard.putNumber("SwerveAutoTranslateCommand/SpeedOmega", Math.toDegrees(speeds.omegaRadiansPerSecond));
-        SmartDashboard.putBoolean("SwerveAutoTranslateCommand/Running?", true);
-
-        // publish the "next" and final poses for debugging
-        Util.publishPose("AutoPoseNext", nextPose);
+        // let's also  calculate and display where we "should" be; this is
+        // incredibly helpful for debugging
+        Pose2d desiredPose = new Pose2d(
+                desiredTranslation.desiredPosition,
+                desiredRotation.desiredHeading);
+        Util.publishPose("AutoPoseNext", desiredPose);
         Util.publishPose("AutoPoseFinal", finalPose);
 
-        drive.drive("swerve-pose", speeds);
+        // make it so!
+        drive.drive("rotate", speeds);
     }
+
+    private DesiredRotation calculateRotation(Pose2d currentPose, double time) {
+
+        // if we're not rotating, there's nothing to do
+        if (skipRotation) {
+            return new DesiredRotation(
+                    Rotation2d.kZero,
+                    startPose.getRotation());
+        }
+
+        // this tells us both where we are supposed to be facing right now
+        // (in degrees), as well as how fast we should be turning (in degrees
+        // per second) and in what direction
+        State desiredState = rotationProfile.sample(time);
+
+        // the velocity is the base component of our turning speed - it's like
+        // a "feedforward" component
+        double desiredSpeed = desiredState.velocity;
+
+        // this is the actual position where we should be at this time
+        Rotation2d desiredHeading = startPose.getRotation()
+                .plus(Rotation2d.fromDegrees(desiredState.position));
+
+        // we compare actual vs desired position to add feedback to speed and
+        // correct for discrepancies
+        desiredSpeed += Util.applyClamp(
+                pidOmega.calculate(currentPose.getRotation().getDegrees(), desiredHeading.getDegrees()),
+                rotateMaxFeedback);
+
+        return new DesiredRotation(
+                Rotation2d.fromDegrees(desiredSpeed),
+                desiredHeading);
+    }
+
+    private DesiredTranslation calculateTranslation(Pose2d currentPose, double time) {
+
+        // if we're not translating, there's nothing to do
+        if (skipTranslation) {
+            return new DesiredTranslation(
+                    Translation2d.kZero,
+                    currentPose.getTranslation());
+        }
+
+        // this is tells us how far we should be along the straight line
+        // between (in feet) between the start and final pose, and how fast we
+        // should be going along that line (in feet per second)
+        State desiredState = translationProfile.sample(time);
+
+        // this decomposes the speed (in feet per second) into X and Y
+        // components using the cos and sin we already calculated; as with
+        // rotation this is "feedforward"
+        double speedX = desiredState.velocity * cos;
+        double speedY = desiredState.velocity * sin;
+
+        // this does the same for position (but calculates it in meters, since
+        // that's what Pose2d uses, and then updates desired speed based on
+        // feedback
+        double positionX = startPose.getX() + Units.feetToMeters(desiredState.position * cos);
+        double positionY = startPose.getY() + Units.feetToMeters(desiredState.position * sin);
+
+        // here's where we calculate feedback in the X and Y directions based
+        // on how far off we are from the desired X/Y
+         speedX += Util.applyClamp(
+                 pidX.calculate(currentPose.getX(), positionX),
+                 translateMaxFeedback);
+         speedY += Util.applyClamp(
+                 pidY.calculate(currentPose.getY(), positionY),
+                 translateMaxFeedback);
+
+        return new DesiredTranslation(
+                new Translation2d(Units.feetToMeters(speedX), Units.feetToMeters(speedY)),
+                new Translation2d(positionX, positionY));
+    }
+
+    // ===============================================================
+    // FINISHING UP
+    // ===============================================================
 
     @Override
     public boolean isFinished() {
 
-        // we're done when the total time of the longest trajectory has
-        // elapsed (we may not have made it to our goal; see end() for
-        // an error check
-        double totalTime = Math.max(translate.totalTime(), rotate.totalTime());
-        return timer.hasElapsed(totalTime);
+        double time = timer.get();
+
+        // rotation and translation are separate motions; one may complete
+        // before the other, but we aren't done until both are complete
+        boolean rotationDone = skipRotation || rotationProfile.isFinished(time);
+        boolean translationDone = skipTranslation || translationProfile.isFinished(time);
+
+        return rotationDone && translationDone;
     }
 
     @Override
     public void end(boolean interrupted) {
 
         Pose2d currentPose = drive.getPose();
+        Rotation2d currentHeading = currentPose.getRotation();
 
-        // if we ran out of time before reaching our goal, we might have hit
-        // an obstacle or something, or it might be a sign that our tuning is
-        // off and needs to be adjusted; we'll log failure here
+        // since we determine completion based on the timing of the motion
+        // profiles, we may not actually hit the target pose (e.g. if there
+        // is an obstruction on the field, or our tuning is wrong). we will
+        // log a warning about that - if this appears a lot, there may be a
+        // problem with tuning
 
-        // translation tolerance is specified in feet
-        double distance = Util.feetBetween(currentPose, finalPose);
-        if (distance > translateTolerance.getAsDouble()) {
-            Util.log("[swerve-pose] !!! FAILED TO TRANSLATE - distance is %.2f", distance);
+        double deltaDegrees = finalPose.getRotation()
+                .minus(currentHeading)
+                .getDegrees();
+        if (Math.abs(deltaDegrees) > rotateTolerance.getAsDouble()) {
+            Util.log("[auto-pose] !!! FAILED ROTATE; delta is %.2f", deltaDegrees);
+        } else {
+            Util.log("[auto-pose] done rotating");
         }
 
-        // rotational tolerance is specified in degrees
-        double degreeDelta = Math.abs(currentPose
-                .getRotation()
-                .minus(finalPose.getRotation())
-                .getDegrees());
-        if (degreeDelta > rotateTolerance.getAsDouble()) {
-            Util.log("[swerve-pose] !!! FAILED TO ROTATE - delta is %.2f", degreeDelta);
+        double deltaFeet = Util.feetBetween(finalPose, currentPose);
+        if (Math.abs(deltaFeet) > translateTolerance.getAsDouble()) {
+            Util.log("[auto-pose] !!! FAILED TRANSLATE; delta is %.2f", deltaFeet);
+        } else {
+            Util.log("[auto-pose] done translating");
         }
 
-        SmartDashboard.putBoolean("SwerveAutoTranslateCommand/Running?", false);
+        SmartDashboard.putBoolean("SwerveAutoPoseCommand/Running?", false);
     }
 
-    /**
-     * @return a command that, when run, will calculate a target position
-     * by transforming the drive's current position, and then drive there
-     */
-    public static Command fromTransform(SwerveDriveSubsystem drive,
-                                        Transform2d transform) {
-        return drive.defer(() -> new SwerveAutoPoseCommand(
-                drive,
-                drive.getPose().transformBy(transform)));
+    record DesiredRotation(Rotation2d desiredSpeed, Rotation2d desiredHeading) {
+
+    }
+
+    record DesiredTranslation(Translation2d desiredSpeed, Translation2d desiredPosition) {
+
     }
 }
