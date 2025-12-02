@@ -25,6 +25,7 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
+import java.util.function.Predicate;
 
 /**
  * Basic utility functions that can be useful
@@ -156,15 +157,16 @@ public class Util {
         return pose.map(Pose3d::toPose2d).orElse(null);
     }
 
-    /** @return the closest AprilTag to the supplied pose */
-    public static AprilTag getClosestAprilTag(Pose2d currentPose) {
+    /** @return the closest AprilTag matching the supplied criteria */
+    public static AprilTag getClosestAprilTagMatching(Pose2d currentPose,
+                                                      Predicate<AprilTag> predicate) {
 
         AprilTag closestTag = null;
         double closestDistance = Double.MAX_VALUE;
 
         for (AprilTag tag : Util.getFieldLayout().getTags()) {
             double tagDistance = Util.feetBetween(currentPose, tag.pose.toPose2d());
-            if (tagDistance < closestDistance) {
+            if (predicate.test(tag) && tagDistance < closestDistance) {
                 closestDistance = tagDistance;
                 closestTag = tag;
             }
