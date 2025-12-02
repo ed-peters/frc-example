@@ -5,33 +5,51 @@ import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.robot.subsystems.swerve.SwerveDriveSubsystem;
 import frc.robot.util.Util;
+
+import java.util.function.Supplier;
 
 import static frc.robot.subsystems.vision.LimelightConfig.classicMaxAmbiguity;
 import static frc.robot.subsystems.vision.LimelightConfig.classicMaxDistance;
 import static frc.robot.subsystems.vision.LimelightConfig.confidenceClassic;
 import static frc.robot.subsystems.vision.LimelightConfig.confidenceMegaTag2;
 import static frc.robot.subsystems.vision.LimelightConfig.megaTagMinArea;
-import static frc.robot.subsystems.vision.LimelightConfig.megaTagMaxYawRate;
+import static frc.robot.subsystems.vision.LimelightConfig.megaTagMaxSpinRate;
 import static frc.robot.subsystems.vision.LimelightConfig.useMegaTag2;
-import static frc.robot.subsystems.vision.LimelightHelpers.PoseEstimate;
 import static frc.robot.subsystems.vision.LimelightConfig.limelightName;
+import static frc.robot.subsystems.vision.LimelightHelpers.PoseEstimate;
 
 /**
- * Helper methods for using Limelight pose estimation and targeting.</p>
- *
- * Pose estimation is based on sample code from vendor documentation
+ * Subsystem for using Limelight pose estimation and targeting. Pose
+ * estimation is based on sample code from vendor documentation
  * {@link <a href="https://docs.limelightvision.io/docs/docs-limelight/tutorials/tutorial-swerve-pose-estimation">here</a>.
  * We can supply poses using either the classic or MegaTag2 algorithms.
  * </p>
  * 
- * Targeting is based on the in-view id's ID and camera offset/area.
+ * Targeting is based on the in-view id's ID and camera tx/ta.
  * </p>
+ *
+ * This subsystem is implemented so it doesn't depend on a specific swerve
+ * drive implementation.</p>
  */
 public class LimelightSubsystem extends SubsystemBase {
 
-    enum Status {
+    /**
+     * Represents the targeting output of the limelight. TX and TA are
+     * based on the similarly-named properties from the <a href="https://docs.limelightvision.io/docs/docs-limelight/apis/complete-networktables-api">Limelight
+     * API.</a>
+     */
+    public record LimelightTarget(int id, Pose2d pose, double tx, double ta) {
+
+        public static final LimelightTarget NO_TARGET = new LimelightTarget(-1, Util.NAN_POSE, Double.NaN, Double.NaN);
+
+    }
+
+    /**
+     * There are various ways pose estimation could fail; this is used by the
+     * methods which do the estimation to show what's going on
+     */
+    enum EstimateStatus {
         NO_ESTIMATE,
         NO_TAG,
         TOO_AMBIGUOUS,
@@ -40,57 +58,67 @@ public class LimelightSubsystem extends SubsystemBase {
         SUCCESS
     }
 
-    final SwerveDriveSubsystem drive;
+    final Supplier<Pose2d> poseSupplier;
+    final VisionEstimateConsumer estimateConsumer;
 
-    Status lastClassicStatus;
-    double lastClassicAmbiguity;
-    double lastClassicDistance;
+    double currentHeading;
+    double previousHeading;
+    double latestSpinRate;
+    EstimateStatus latestClassicStatus;
+    double latestClassicAmbiguity;
+    double latestClassicDistance;
+    EstimateStatus latestMegaTagStatus;
+    double latestMegaTagArea;
+    Pose2d latestPose;
+    double latestTimestamp;
+    LimelightTarget latestTarget;
 
-    Status lastMegaTagStatus;
-    double lastMegaTagYaw;
-    double lastMegaTagYawRate;
-    double lastMegaTagArea;
+    public LimelightSubsystem(Supplier<Pose2d> poseSupplier,
+                              VisionEstimateConsumer estimateConsumer) {
 
-    LimelightTarget lastTarget;
-    Pose2d lastPose;
+        this.poseSupplier = poseSupplier;
+        this.estimateConsumer = estimateConsumer;
+        this.latestClassicStatus = EstimateStatus.NO_ESTIMATE;
+        this.latestClassicAmbiguity = Double.NaN;
+        this.latestClassicDistance = Double.NaN;
+        this.latestMegaTagStatus = EstimateStatus.NO_ESTIMATE;
+        this.latestMegaTagArea = Double.NaN;
+        this.latestTarget = LimelightTarget.NO_TARGET;
+        this.latestPose = Util.NAN_POSE;
 
-    public LimelightSubsystem(SwerveDriveSubsystem drive) {
-
-        this.drive = drive;
-        this.lastClassicStatus = Status.NO_ESTIMATE;
-        this.lastClassicAmbiguity = Double.NaN;
-        this.lastClassicDistance = Double.NaN;
-        this.lastMegaTagStatus = Status.NO_ESTIMATE;
-        this.lastMegaTagArea = Double.NaN;
-        this.lastTarget = LimelightTarget.NO_TARGET;
-        this.lastPose = Util.NAN_POSE;
-
-        SmartDashboard.putData("LimelightEstimator", builder -> {
-            builder.addDoubleProperty("PoseClassic/Ambiguity", () -> lastClassicAmbiguity, null);
-            builder.addDoubleProperty("PoseClassic/Distance", () -> lastClassicDistance, null);
-            builder.addStringProperty("PoseClassic/Status", () -> lastClassicStatus.toString(), null);
-            builder.addDoubleProperty("PoseMegaTag2/Area", () -> lastMegaTagArea, null);
-            builder.addDoubleProperty("PoseMegaTag2/Yaw", () -> lastMegaTagYaw, null);
-            builder.addDoubleProperty("PoseMegaTag2/YawRate", () -> lastMegaTagYawRate, null);
-            builder.addStringProperty("PoseMegaTag2/Status", () -> lastMegaTagStatus.toString(), null);
-            builder.addDoubleProperty("Target/tx", () -> lastTarget.offset(), null);
-            builder.addDoubleProperty("Target/ta", () -> lastTarget.area(), null);
-            builder.addDoubleProperty("Target/tid", () -> lastTarget.id(), null);
+        SmartDashboard.putData("LimelightSubsystem", builder -> {
+            builder.addDoubleProperty("PoseClassic/Ambiguity", () -> latestClassicAmbiguity, null);
+            builder.addDoubleProperty("PoseClassic/Distance", () -> latestClassicDistance, null);
+            builder.addStringProperty("PoseClassic/Status", () -> latestClassicStatus.toString(), null);
+            builder.addDoubleProperty("PoseMegaTag2/Area", () -> latestMegaTagArea, null);
+            builder.addDoubleProperty("PoseMegaTag2/SpinRate", () -> latestSpinRate, null);
+            builder.addStringProperty("PoseMegaTag2/Status", () -> latestMegaTagStatus.toString(), null);
+            builder.addDoubleProperty("Target/tx", () -> latestTarget.tx(), null);
+            builder.addDoubleProperty("Target/ta", () -> latestTarget.ta(), null);
+            builder.addDoubleProperty("Target/tid", () -> latestTarget.id(), null);
         });
     }
 
     /** @return information about the current in-view id */
     public LimelightTarget getCurrentTarget() {
-        return lastTarget;
+        return latestTarget;
     }
 
     /** @return the current pose (null if there isn't one) */
     public Pose2d getCurrentPose() {
-        return lastPose;
+        return Double.isFinite(latestPose.getX()) ? latestPose : null;
     }
 
     @Override
     public void periodic() {
+
+        // we may need to know the yaw rate (that is, how fast the robot is
+        // spinning around). we will calculate that every cycle.
+        currentHeading = poseSupplier.get().getRotation().getDegrees();
+        if (Double.isFinite(previousHeading)) {
+            latestSpinRate = (currentHeading - previousHeading) / Util.DT;
+        }
+        previousHeading = currentHeading;
 
         // every cycle we update the pose estimate using the selected
         // algorithm. if our frame rate was more than 50 Hz, we could
@@ -98,30 +126,17 @@ public class LimelightSubsystem extends SubsystemBase {
         // pose estimates, but that's probably overkill for our level
         // of accuracy right now
         if (useMegaTag2.getAsBoolean()) {
-            updateEstimateMegaTag2(drive.getHeading().getDegrees(), drive.getYawRate());
+            updateEstimateMegaTag2();
         } else {
             updateEstimateClassic();;
         }
 
-        // we publish the target pose if we have one; if we don't, the
-        // last published pose will remain - this helps debugging when
-        // we lose contact with targets
-        if (lastPose != null) {
-            Util.publishPose("LimelightPose", lastPose);
-        }
+        // update target information
+        updateTargetingInformation();
 
-        // see if there's a target in view
-        int id = (int) LimelightHelpers.getFiducialID(limelightName);
-        if (id > 0) {
-            Pose2d pose = Util.getAprilTagPose(id);
-            double offset = LimelightHelpers.getTX(limelightName);
-            double area = LimelightHelpers.getTA(limelightName);
-            lastTarget = new LimelightTarget(id, pose, offset, area);
-            Util.publishPose("LimelightTarget", pose);
-        } else {
-            lastTarget = LimelightTarget.NO_TARGET;
-            Util.publishPose("LimelightTarget", Util.NAN_POSE);
-        }
+        // publish pose and tag position information for debugging
+        Util.publishPose("LimelightPose", latestPose);
+        Util.publishPose("LimelightTarget", latestTarget.pose);
     }
 
     /**
@@ -130,38 +145,40 @@ public class LimelightSubsystem extends SubsystemBase {
      */
     private void updateEstimateClassic() {
 
-        lastClassicStatus = Status.NO_ESTIMATE;
-        lastClassicAmbiguity = Double.NaN;
-        lastClassicDistance = Double.NaN;
-        lastPose = Util.NAN_POSE;
+        latestClassicStatus = EstimateStatus.NO_ESTIMATE;
+        latestClassicAmbiguity = Double.NaN;
+        latestClassicDistance = Double.NaN;
+        latestPose = Util.NAN_POSE;
 
-        // get an estimate; if there isn't one, or we don't have exactly
-        // one item in view, or it's not a recognized AprilTag, we'll
-        // ignore it
         PoseEstimate estimate = LimelightHelpers.getBotPoseEstimate_wpiBlue(limelightName);
-        if (estimate == null || estimate.tagCount != 1 || estimate.rawFiducials.length != 1) {
+
+        // if there is no estimate, or it's not based on a single tag, we
+        // will ignore it
+        if (estimate == null
+                || estimate.tagCount != 1
+                || estimate.rawFiducials.length != 1) {
+            latestClassicStatus = EstimateStatus.NO_ESTIMATE;
             return;
         }
 
-        lastClassicAmbiguity = estimate.rawFiducials[0].ambiguity;
-        lastClassicDistance = estimate.rawFiducials[0].distToCamera;
+        latestClassicAmbiguity = estimate.rawFiducials[0].ambiguity;
+        latestClassicDistance = estimate.rawFiducials[0].distToCamera;
 
-        // if the id is ambiguous, we'll ignore it
-        if (lastClassicAmbiguity > classicMaxAmbiguity.getAsDouble()) {
-            lastClassicStatus = Status.TOO_AMBIGUOUS;
+        // we'll also ignore the estimate if it's too ambiguous or too far
+        // away from the robot
+        if (latestClassicAmbiguity > classicMaxAmbiguity.getAsDouble()) {
+            latestClassicStatus = EstimateStatus.TOO_AMBIGUOUS;
+            return;
+        } else if (latestClassicDistance > classicMaxDistance.getAsDouble()) {
+            latestClassicStatus = EstimateStatus.TOO_FAR;
             return;
         }
 
-        // if the id is too far away, we'll ignore it
-        if (lastClassicDistance > classicMaxDistance.getAsDouble()) {
-            lastClassicStatus = Status.TOO_FAR;
-            return;
-        }
-
-        lastClassicStatus = Status.SUCCESS;
-        lastPose = estimate.pose;
-
-        drive.getPoseCalculator().addVisionPose(
+        // otherwise, we're successful!
+        latestClassicStatus = EstimateStatus.SUCCESS;
+        latestPose = estimate.pose;
+        latestTimestamp = estimate.timestampSeconds;
+        estimateConsumer.accept(
                 estimate.pose,
                 estimate.timestampSeconds,
                 confidenceClassic);
@@ -171,48 +188,60 @@ public class LimelightSubsystem extends SubsystemBase {
      * Add the latest pose estimate from the limelight to the drive using the
      * MegaTag2 algorithm
      */
-    private void updateEstimateMegaTag2(
-            double yawDegrees,
-            double yawRateDegreesPerSecond) {
+    private void updateEstimateMegaTag2() {
 
-        lastMegaTagStatus = Status.NO_ESTIMATE;
-        lastMegaTagYaw = yawDegrees;
-        lastMegaTagYawRate = yawRateDegreesPerSecond;
-        lastMegaTagArea = Double.NaN;
-        lastPose = Util.NAN_POSE;
+        latestMegaTagStatus = EstimateStatus.NO_ESTIMATE;
+        latestMegaTagArea = Double.NaN;
+        latestPose = Util.NAN_POSE;
 
         // if we're spinning around too fast, LL estimates get wacky
-        if (yawRateDegreesPerSecond > megaTagMaxYawRate.getAsDouble()) {
-            lastMegaTagStatus = Status.SPINNING;
+        if (latestSpinRate > megaTagMaxSpinRate.getAsDouble()) {
+            latestMegaTagStatus = EstimateStatus.SPINNING;
             return;
         }
 
         // MegaTag2 wants to know our heading for its calculations
-        LimelightHelpers.SetRobotOrientation(limelightName, yawDegrees, 0.0, 0.0, 0.0, 0.0, 0.0);
+        LimelightHelpers.SetRobotOrientation(limelightName, latestSpinRate, 0.0, 0.0, 0.0, 0.0, 0.0);
 
         // get an estimate; if there isn't one, or we don't have exactly
         // one item in view, or it's not a recognized AprilTag, we'll
         // ignore it
         PoseEstimate estimate = LimelightHelpers.getBotPoseEstimate_wpiBlue_MegaTag2(limelightName);
         if (estimate == null || estimate.tagCount != 1 || estimate.rawFiducials.length != 1) {
-            lastMegaTagStatus = Status.NO_ESTIMATE;
+            latestMegaTagStatus = EstimateStatus.NO_ESTIMATE;
             return;
         }
 
         // if the id is too small (meaning too far away) we'll ignore it
-        lastMegaTagArea = estimate.avgTagArea;
-        if (lastMegaTagArea < megaTagMinArea.getAsDouble()) {
-            lastMegaTagStatus = Status.TOO_FAR;
+        latestMegaTagArea = estimate.avgTagArea;
+        if (latestMegaTagArea < megaTagMinArea.getAsDouble()) {
+            latestMegaTagStatus = EstimateStatus.TOO_FAR;
             return;
         }
 
-        lastMegaTagStatus = Status.SUCCESS;
-        lastPose = estimate.pose;
-
-        drive.getPoseCalculator().addVisionPose(
+        // otherwise, we're successful!
+        latestMegaTagStatus = EstimateStatus.SUCCESS;
+        latestPose = estimate.pose;
+        latestTimestamp = estimate.timestampSeconds;
+        estimateConsumer.accept(
                 estimate.pose,
                 estimate.timestampSeconds,
                 confidenceMegaTag2);
+    }
+
+    /**
+     * Uses the Limelight "raw" tag API to calculate a target position
+     */
+    private void updateTargetingInformation() {
+        int id = (int) LimelightHelpers.getFiducialID(limelightName);
+        if (id > 0) {
+            Pose2d pose = Util.getAprilTagPose(id);
+            double offset = LimelightHelpers.getTX(limelightName);
+            double area = LimelightHelpers.getTA(limelightName);
+            latestTarget = new LimelightTarget(id, pose, offset, area);
+        } else {
+            latestTarget = LimelightTarget.NO_TARGET;
+        }
     }
 
     /**

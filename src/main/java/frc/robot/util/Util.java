@@ -1,5 +1,6 @@
 package frc.robot.util;
 
+import edu.wpi.first.apriltag.AprilTag;
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.MathUtil;
@@ -113,7 +114,6 @@ public class Util {
         };
     }
 
-
     /**
      * Resets a PID controller to use the most recent tuning constants
      * and clear out accumulated error
@@ -136,18 +136,41 @@ public class Util {
     // first time we request id info)
     static AprilTagFieldLayout layout = null;
 
-    /** @return information about the supplied AprilTag */
-    public static Pose2d getAprilTagPose(int id) {
+    /**
+     * @return the current {@link AprilTagFieldLayout}
+     */
+    public static AprilTagFieldLayout getFieldLayout() {
+        // in 2025 there was an issue where the field measurements were
+        // different depending on which vendor made the field; if this
+        // comes up again you might need to make a configurable property
+        // to indicate which field layout to use
         if (layout == null) {
-
-            // in 2025 there was an issue where the field measurements were
-            // different depending on which vendor made the field; if this
-            // comes up again you might need to make a configurable property
-            // to indicate which field layout to use
             layout = AprilTagFieldLayout.loadField(AprilTagFields.kDefaultField);
         }
-        Optional<Pose3d> pose = layout.getTagPose(id);
+        return layout;
+    }
+
+    /** @return information about the supplied AprilTag */
+    public static Pose2d getAprilTagPose(int id) {
+        Optional<Pose3d> pose = getFieldLayout().getTagPose(id);
         return pose.map(Pose3d::toPose2d).orElse(null);
+    }
+
+    /** @return the closest AprilTag to the supplied pose */
+    public static AprilTag getClosestAprilTag(Pose2d currentPose) {
+
+        AprilTag closestTag = null;
+        double closestDistance = Double.MAX_VALUE;
+
+        for (AprilTag tag : Util.getFieldLayout().getTags()) {
+            double tagDistance = Util.feetBetween(currentPose, tag.pose.toPose2d());
+            if (tagDistance < closestDistance) {
+                closestDistance = tagDistance;
+                closestTag = tag;
+            }
+        }
+
+        return closestTag;
     }
 
     static BooleanEntry isRedAlliance = null;

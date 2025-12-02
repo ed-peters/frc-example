@@ -9,10 +9,9 @@ import edu.wpi.first.networktables.DoublePublisher;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import frc.robot.subsystems.swerve.SwerveDriveSubsystem;
-import frc.robot.subsystems.swerve.SwervePoseCalculator.PoseType;
 
 import java.util.Arrays;
+import java.util.function.Supplier;
 
 import static frc.robot.subsystems.vision.LimelightConfig.classicPoseKey;
 import static frc.robot.subsystems.vision.LimelightConfig.limelightName;
@@ -57,7 +56,7 @@ public class LimelightSim {
     /**
      * We add a little "noise" to the LL pose estimates, so we can tell them
      * apart from the simulated odometry position of the robot; this is how
-     * far we offset the simulated position from the robot's actual pose
+     * far we tx the simulated position from the robot's actual pose
      */
     public static final double DEFAULT_POSE_ERROR = Units.inchesToMeters(4.0);
 
@@ -66,13 +65,13 @@ public class LimelightSim {
     final DoublePublisher taPublisher;
     final DoublePublisher txPublisher;
     final DoublePublisher tidPublisher;
-    final SwerveDriveSubsystem drive;
+    final Supplier<Pose2d> poseSupplier;
     double detectionRadius;
     double poseError;
 
-    public LimelightSim(SwerveDriveSubsystem drive) {
+    public LimelightSim(Supplier<Pose2d> poseSupplier) {
 
-        this.drive = drive;
+        this.poseSupplier = poseSupplier;
         this.detectionRadius = DEFAULT_DETECTION_RADIUS;
         this.poseError = DEFAULT_POSE_ERROR;
 
@@ -91,8 +90,7 @@ public class LimelightSim {
 
     public void updateFakePoses() {
 
-        Pose2d odometry = drive.getPoseCalculator()
-                .getPoseEstimate(PoseType.ODOMETRY);
+        Pose2d odometry = poseSupplier.get();
 
         // we'll only fake pose estimates if the robot is within a few
         // meters of the tag
@@ -153,7 +151,7 @@ public class LimelightSim {
             // the LL is calculating where it "thinks" the robot is by using 
             // vision recognition and AprilTag information. this is pretty good,
             // but always a little bit off; we'll simulate that by using a small
-            // offset from the robot's current pose. and we'll assume the robot
+            // tx from the robot's current pose. and we'll assume the robot
             // isn't going to leave the ground.
             robotPosition.getX() + poseError,
             robotPosition.getY() + poseError,
@@ -170,12 +168,12 @@ public class LimelightSim {
             1.0, // tag count
             0.0, // tag span (we don't use this)
             distanceToTag, // average distance from camera
-            tagArea, // average tag area
+            tagArea, // average tag ta
 
             TAG_ID, // tag ID
-            1.0, // horizontal offset to primary pixel
-            1.0, // vertical offset to primary pixel
-            tagArea, // tag area
+            1.0, // horizontal tx to primary pixel
+            1.0, // vertical tx to primary pixel
+            tagArea, // tag ta
             distanceToTag, // distance to camera
             distanceToTag, // distance to robot
             0.3  // ambiguity

@@ -45,6 +45,6 @@ public class LimelightConfig {
 
     /** Thresholds for MegaTag2 algorithm */
     public static final DoubleSupplier megaTagMinArea = pref("LimelightPose/MegaTagMinArea", 0.5);
-    public static final DoubleSupplier megaTagMaxYawRate = pref("LimelightPose/MegaTagMaxYawRate", 720.0);
+    public static final DoubleSupplier megaTagMaxSpinRate = pref("LimelightPose/MegaTagMaxYawRate", 720.0);
 
 }

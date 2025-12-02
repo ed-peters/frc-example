@@ -49,7 +49,7 @@ import static frc.robot.commands.swerve.SwerveAutoConfig.translateTolerance;
  * These are independent actions and are calculated separately, then combined
  * during execution. Neither is required - you can rotate without translating
  * (e.g. to align to a target heading), or translate without rotating (e.g. to
- * "scoot" to a fixed offset).</p>
+ * "scoot" to a fixed tx).</p>
  *
  * This command is implemented so it doesn't depend on a specific swerve
  * drive implementation.</p>
@@ -115,9 +115,9 @@ public class SwerveAutoPoseCommand extends Command {
             return;
         }
 
-        // we calculate a "position" around the circle based on its offset
+        // we calculate a "position" around the circle based on its tx
         // from the starting position - starting at 0 degrees and ending
-        // at the final heading. the sign of this offset may be positive or
+        // at the final heading. the sign of this tx may be positive or
         // negative depending on whether we're going left or right.
         double degrees = finalPose.getRotation()
                         .minus(startPose.getRotation())

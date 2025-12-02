@@ -83,7 +83,7 @@ public class SwervePoseCalculator {
      * to "trust" the vision estimate, and approximately how old it is (in
      * seconds since the robot started up).
      */
-    public void addVisionPose(Pose2d pose, double timestamp, Matrix<N3,N1> stdDevs) {
+    public void addVisionEstimate(Pose2d pose, double timestamp, Matrix<N3,N1> stdDevs) {
         if (pose != null) {
             estimator.setVisionMeasurementStdDevs(stdDevs);
             estimator.addVisionMeasurement(pose, timestamp);

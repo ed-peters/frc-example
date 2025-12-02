@@ -4,10 +4,12 @@ import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
-import frc.robot.subsystems.swerve.SwerveDriveSubsystem;
+import edu.wpi.first.wpilibj2.command.Subsystem;
 import frc.robot.subsystems.vision.LimelightSubsystem;
-import frc.robot.subsystems.vision.LimelightTarget;
+import frc.robot.subsystems.vision.LimelightSubsystem.LimelightTarget;
 import frc.robot.util.Util;
+
+import java.util.function.Consumer;
 
 import static frc.robot.commands.vision.LimelightConfig.enableLogging;
 import static frc.robot.commands.vision.LimelightConfig.limelightAreaD;
@@ -20,25 +22,28 @@ import static frc.robot.commands.vision.LimelightConfig.limelightOffsetTarget;
 import static frc.robot.commands.vision.LimelightConfig.limelightOffsetTolerance;
 
 /**
- * This aligns the robot to an AprilTag based on:
+ * This implements the "visual servo" approach to aligning a robot to
+ * an AprilTag based on:
  * <ul>
  *
- *     <li>The offset of the id to the center of the camera frame. This is
+ *     <li>The tx of the id to the center of the camera frame. This is
  *     based on the Limelight TX value, which is is >0 if the tag is to the
  *     left of center in the frame.</li>
  *
- *     <li>The area of the id in the camera frame. For the Limelight, this is
+ *     <li>The ta of the id in the camera frame. For the Limelight, this is
  *     TA, and gets bigger the closer we are to the id.</li>
  *
  * </ul>
  *
- * By tuning this command you will be able to arrive at a reliable
- * position in front of a tag, which is an important step in 
- * targeting.</p>
+ * By tuning this command you will be able to arrive at a reliable position
+ * in front of a tag, which is an important step in targeting.</p>
+ *
+ * This command is implemented so it doesn't depend on a specific swerve
+ * drive implementation.</p>
  */
-public class LimelightAprilTagCommand extends Command {
+public class LimelightVisualServoCommand extends Command {
 
-    final SwerveDriveSubsystem drive;
+    final Consumer<ChassisSpeeds> speedConsumer;
     final LimelightSubsystem limelight;
     final PIDController pidArea;
     final PIDController pidOffset;
@@ -50,13 +55,14 @@ public class LimelightAprilTagCommand extends Command {
     boolean achievedOffset;
     boolean running;
 
-    public LimelightAprilTagCommand(SwerveDriveSubsystem drive,
-                                    LimelightSubsystem limelight) {
-        this.drive = drive;
+    public LimelightVisualServoCommand(LimelightSubsystem limelight,
+                                       Subsystem driveSubsystem,
+                                       Consumer<ChassisSpeeds> speedConsumer) {
         this.limelight = limelight;
+        this.speedConsumer = speedConsumer;
         this.pidArea = new PIDController(limelightAreaP.getAsDouble(), 0.0, limelightAreaD.getAsDouble());
         this.pidOffset = new PIDController(limelightOffsetP.getAsDouble(), 0.0, limelightOffsetD.getAsDouble());
-        addRequirements(drive);
+        addRequirements(driveSubsystem);
     }
 
     @Override
@@ -89,15 +95,15 @@ public class LimelightAprilTagCommand extends Command {
         lastSpeedX = 0.0;
         lastSpeedY = 0.0;
 
-        // area is how big the tag is in the camera frame; bigger means we're
+        // ta is how big the tag is in the camera frame; bigger means we're
         // closer to the tag (and hence we want to move in the -X direction)
-        lastArea = target.area();
+        lastArea = target.ta();
 
-        // the limelight reports TX as positive when the tag is offset to the
+        // the limelight reports TX as positive when the tag is tx to the
         // left. when this is the case, we would want to move left (the +Y
-        // direction), which is also positive. so we will negate the offset
+        // direction), which is also positive. so we will negate the tx
         // for our feedback.
-        lastOffset = -target.offset();
+        lastOffset = -target.tx();
 
         // calculate X speed (forward-back) if the tag is either too big or
         // to small in the camera frame
@@ -107,7 +113,7 @@ public class LimelightAprilTagCommand extends Command {
         }
 
         // calculate the Y speed (left-right) if the tag is to the right or
-        // left of the desired offset
+        // left of the desired tx
         if (!achievedOffset) {
             lastSpeedY = pidOffset.calculate(lastOffset, limelightOffsetTarget.getAsDouble());
             achievedOffset = pidOffset.atSetpoint();
@@ -116,7 +122,7 @@ public class LimelightAprilTagCommand extends Command {
         // we will run until we've hit both objectives
         running = !(achievedArea && achievedOffset);
 
-        drive.drive("ll-target", new ChassisSpeeds(
+        speedConsumer.accept(new ChassisSpeeds(
                 lastSpeedX,
                 lastSpeedY,
                 0.0));
@@ -126,15 +132,15 @@ public class LimelightAprilTagCommand extends Command {
         // them all under different names, we'll just have whichever one
         // is running publish the "latest" information for debugging
         if (enableLogging) {
-            SmartDashboard.putNumber("LimelightAprilTagCommand/SpeedX", lastSpeedX);
-            SmartDashboard.putNumber("LimelightAprilTagCommand/SpeedY", lastSpeedY);
-            SmartDashboard.putNumber("LimelightAprilTagCommand/OffsetCurrent", lastOffset);
-            SmartDashboard.putNumber("LimelightAprilTagCommand/OffsetError", pidOffset.getError());
-            SmartDashboard.putNumber("LimelightAprilTagCommand/AreaCurrent", lastArea);
-            SmartDashboard.putNumber("LimelightAprilTagCommand/AreaOffset", pidArea.getError());
-            SmartDashboard.putBoolean("LimelightAprilTagCommand/AtX?", pidOffset.atSetpoint());
-            SmartDashboard.putBoolean("LimelightAprilTagCommand/AtY?", pidArea.atSetpoint());
-            SmartDashboard.putBoolean("LimelightAprilTagCommand/Running?", true);
+            SmartDashboard.putNumber("LimelightVisualServoCommand/SpeedX", lastSpeedX);
+            SmartDashboard.putNumber("LimelightVisualServoCommand/SpeedY", lastSpeedY);
+            SmartDashboard.putNumber("LimelightVisualServoCommand/OffsetCurrent", lastOffset);
+            SmartDashboard.putNumber("LimelightVisualServoCommand/OffsetError", pidOffset.getError());
+            SmartDashboard.putNumber("LimelightVisualServoCommand/AreaCurrent", lastArea);
+            SmartDashboard.putNumber("LimelightVisualServoCommand/AreaError", pidArea.getError());
+            SmartDashboard.putBoolean("LimelightVisualServoCommand/AtX?", pidOffset.atSetpoint());
+            SmartDashboard.putBoolean("LimelightVisualServoCommand/AtY?", pidArea.atSetpoint());
+            SmartDashboard.putBoolean("LimelightVisualServoCommand/Running?", true);
         }
     }
 
@@ -171,7 +177,7 @@ public class LimelightAprilTagCommand extends Command {
         lastSpeedY = Double.NaN;
 
         if (enableLogging) {
-            SmartDashboard.putBoolean("LimelightAprilTagCommand/Running?", false);
+            SmartDashboard.putBoolean("LimelightVisualServoCommand/Running?", false);
         }
     }
 }
