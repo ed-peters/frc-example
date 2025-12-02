@@ -12,14 +12,15 @@ import frc.robot.util.Util;
 import java.util.function.Consumer;
 
 import static frc.robot.commands.vision.LimelightConfig.enableLogging;
-import static frc.robot.commands.vision.LimelightConfig.limelightAreaD;
-import static frc.robot.commands.vision.LimelightConfig.limelightAreaP;
-import static frc.robot.commands.vision.LimelightConfig.limelightAreaTarget;
-import static frc.robot.commands.vision.LimelightConfig.limelightAreaTolerance;
-import static frc.robot.commands.vision.LimelightConfig.limelightOffsetD;
-import static frc.robot.commands.vision.LimelightConfig.limelightOffsetP;
-import static frc.robot.commands.vision.LimelightConfig.limelightOffsetTarget;
-import static frc.robot.commands.vision.LimelightConfig.limelightOffsetTolerance;
+import static frc.robot.commands.vision.LimelightConfig.servoAreaD;
+import static frc.robot.commands.vision.LimelightConfig.servoAreaP;
+import static frc.robot.commands.vision.LimelightConfig.servoAreaTarget;
+import static frc.robot.commands.vision.LimelightConfig.servoAreaTolerance;
+import static frc.robot.commands.vision.LimelightConfig.servoMaxFeedback;
+import static frc.robot.commands.vision.LimelightConfig.servoOffsetD;
+import static frc.robot.commands.vision.LimelightConfig.servoOffsetP;
+import static frc.robot.commands.vision.LimelightConfig.servoOffsetTarget;
+import static frc.robot.commands.vision.LimelightConfig.servoOffsetTolerance;
 
 /**
  * This implements the "visual servo" approach to aligning a robot to
@@ -60,8 +61,8 @@ public class LimelightVisualServoCommand extends Command {
                                        Consumer<ChassisSpeeds> speedConsumer) {
         this.limelight = limelight;
         this.speedConsumer = speedConsumer;
-        this.pidArea = new PIDController(limelightAreaP.getAsDouble(), 0.0, limelightAreaD.getAsDouble());
-        this.pidOffset = new PIDController(limelightOffsetP.getAsDouble(), 0.0, limelightOffsetD.getAsDouble());
+        this.pidArea = new PIDController(servoAreaP.getAsDouble(), 0.0, servoAreaD.getAsDouble());
+        this.pidOffset = new PIDController(servoOffsetP.getAsDouble(), 0.0, servoOffsetD.getAsDouble());
         addRequirements(driveSubsystem);
     }
 
@@ -73,8 +74,8 @@ public class LimelightVisualServoCommand extends Command {
         running = true;
 
         // always reset the PIDs when you're doing closed loop
-        Util.resetPid(pidOffset, limelightOffsetP, limelightOffsetD, limelightOffsetTolerance);
-        Util.resetPid(pidArea, limelightAreaP, limelightAreaD, limelightAreaTolerance);
+        Util.resetPid(pidOffset, servoOffsetP, servoOffsetD, servoOffsetTolerance);
+        Util.resetPid(pidArea, servoAreaP, servoAreaD, servoAreaTolerance);
 
         Util.log("[ll-target] aligning to id");
     }
@@ -108,14 +109,14 @@ public class LimelightVisualServoCommand extends Command {
         // calculate X speed (forward-back) if the tag is either too big or
         // to small in the camera frame
         if (!achievedArea) {
-            lastSpeedX = pidArea.calculate(lastArea, limelightAreaTarget.getAsDouble());
+            lastSpeedX = pidArea.calculate(lastArea, servoAreaTarget.getAsDouble());
             achievedArea = pidArea.atSetpoint();
         }
 
         // calculate the Y speed (left-right) if the tag is to the right or
         // left of the desired tx
         if (!achievedOffset) {
-            lastSpeedY = pidOffset.calculate(lastOffset, limelightOffsetTarget.getAsDouble());
+            lastSpeedY = pidOffset.calculate(lastOffset, servoOffsetTarget.getAsDouble());
             achievedOffset = pidOffset.atSetpoint();
         }
 
@@ -123,8 +124,8 @@ public class LimelightVisualServoCommand extends Command {
         running = !(achievedArea && achievedOffset);
 
         speedConsumer.accept(new ChassisSpeeds(
-                lastSpeedX,
-                lastSpeedY,
+                Util.applyClamp(lastSpeedX, servoMaxFeedback),
+                Util.applyClamp(lastSpeedY, servoMaxFeedback),
                 0.0));
 
         // in normal operation, we're probably going to wind up with

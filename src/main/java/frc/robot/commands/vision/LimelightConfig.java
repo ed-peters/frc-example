@@ -8,19 +8,48 @@ public class LimelightConfig {
 
     public static final boolean enableLogging = true;
 
-    /** Properties for aligning to an AprilTag (x direction) */
-    public static DoubleSupplier limelightOffsetP = pref("LimelightCommand/OffsetKP", 0.1);
-    public static DoubleSupplier limelightOffsetD = pref("LimelightCommand/OffsetKD", 0.0);
-    public static DoubleSupplier limelightOffsetTarget = pref("LimelightCommand/OffsetTarget", 0.0);
-    public static DoubleSupplier limelightOffsetTolerance = pref("LimelightCommand/OffsetTolerance", 3.0);
+    // ==================================================================
+    // LIMELIGHT VISUAL SERVO
+    // ==================================================================
 
-    /** Properties for aligning to an AprilTag (y direction) */
-    public static DoubleSupplier limelightAreaP = pref("LimelightCommand/AreaKP", 0.5);
-    public static DoubleSupplier limelightAreaD = pref("LimelightCommand/AreaKD", 0.0);
-    public static DoubleSupplier limelightAreaTarget = pref("LimelightCommand/AreaTarget", 4.0);
-    public static DoubleSupplier limelightAreaTolerance = pref("LimelightCommand/AreaTolerance", 0.5);
+    /**
+     * These properties control how we align in the X direction (forward/back)
+     * to achieve the proper tag image size within the camera frame
+     */
+    public static DoubleSupplier servoAreaP = pref("Limelight/Servo/AreaKP", 0.5);
+    public static DoubleSupplier servoAreaD = pref("Limelight/Servo/AreaKD", 0.0);
+    public static DoubleSupplier servoAreaTarget = pref("Limelight/Servo/AreaTarget", 4.0);
+    public static DoubleSupplier servoAreaTolerance = pref("Limelight/Servo/AreaTolerance", 0.5);
 
-    /** Properties for aligning to an AprilTag (both directions) */
-    public static DoubleSupplier limelightMaxFeedback = pref("LimelightCommand/MaxFeedback", 0.0);
+    /**
+     * These properties control how we align in the Y direction (left/right)
+     * to achieve the proper tag offset within the camera frame
+     */
+    public static DoubleSupplier servoOffsetP = pref("Limelight/Servo/OffsetKP", 0.1);
+    public static DoubleSupplier servoOffsetD = pref("Limelight/Servo/OffsetKD", 0.0);
+    public static DoubleSupplier servoOffsetTarget = pref("Limelight/Servo/OffsetTarget", 0.0);
+    public static DoubleSupplier servoOffsetTolerance = pref("Limelight/Servo/OffsetTolerance", 3.0);
+
+    /**
+     * This puts a cap on the maximum speed (in feet per second) we will
+     * translate in either direction
+     */
+    public static DoubleSupplier servoMaxFeedback = pref("Limelight/Servo/MaxFeedback", 10.0);
+
+    // ==================================================================
+    // LIMELIGHT TARGETING
+    // ==================================================================
+
+    /**
+     * How close (in feet) do we have to be to a target before we will
+     * automatically drive there?
+     */
+    public static DoubleSupplier tagMaxDistance = pref("Limelight/Targeting/MaxDistance", 10.0);
+
+    /**
+     * How far back from the tag (in feet) will we position ourself when we
+     * automatically drive there?
+     */
+    public static DoubleSupplier tagStartingOffset = pref("Limelight/Targeting/StartingOffset", 5.0);
 
 }
