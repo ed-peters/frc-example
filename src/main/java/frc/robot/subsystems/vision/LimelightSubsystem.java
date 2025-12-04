@@ -1,5 +1,6 @@
 package frc.robot.subsystems.vision;
 
+import edu.wpi.first.apriltag.AprilTag;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -107,6 +108,11 @@ public class LimelightSubsystem extends SubsystemBase {
     /** @return the current pose (null if there isn't one) */
     public Pose2d getCurrentPose() {
         return Double.isFinite(latestPose.getX()) ? latestPose : null;
+    }
+
+    /** @return true if the specified tag is in view */
+    public boolean isTagInView(AprilTag tag) {
+        return latestTarget.id == tag.ID;
     }
 
     @Override
@@ -249,6 +255,7 @@ public class LimelightSubsystem extends SubsystemBase {
      * axes wrong. It actually comes back in "camera space" (+Z is straight
      * ahead, +X is right and +Y is down)
      */
+    @SuppressWarnings("unused")
     private Pose2d getCorrectedTargetPoseInRobotSpace() {
 
         Pose3d tagPose3 = LimelightHelpers.getTargetPose3d_RobotSpace("limelight");

@@ -66,12 +66,19 @@ public class LimelightSimRobot extends TimedRobot {
         // a will reset the robot's pose based on vision
         controller.a().onTrue(limelightPoseCommand());
 
-        // b will home in on the current target in view
-        controller.b().onTrue(builder.twoStageTargetingCommand(null));
+        // b will home in on the nearest blue reef tag which is currently in
+        // view of the camera
+        controller.b().onTrue(drive.defer(() -> {
+            AprilTag tag = closestBlueReefTag();
+            return builder.reefscapeTargetingCommand(tag, null);
+        }));
 
-        // x will home in on the closest blue reef tag which is less
-        // than 10 ft away
-        controller.x().onTrue(nearestBlueReefTagCommand());
+        // x will home in on the closest blue reef tag (which doesn't have to
+        // be in view)
+        controller.x().onTrue(drive.defer(() -> {
+            AprilTag tag = closestBlueReefTag();
+            return builder.swankyTargetingCommand(tag, 3.0, null);
+        }));
 
         drive.setDefaultCommand(teleopCommand());
 
@@ -90,10 +97,10 @@ public class LimelightSimRobot extends TimedRobot {
     }
 
     /**
-     * This is how you reset the drive's current pose to agree with whatever
-     * is coming from the vision subsystem. This is very useful on e.g. a
-     * practice field where you may not be able to start at a predictable
-     * position.</p>
+     * @return a command to reset the drive's current pose to agree with
+     * whatever is coming from the vision subsystem. This is very useful on
+     * e.g. a practice field where you may not be able to start at a
+     * predictable position.</p>
      *
      * In the simulator, this will cause a small jump in pose because the
      * simulator uses fake poses with a small offset from the real pose.</p>
@@ -110,10 +117,9 @@ public class LimelightSimRobot extends TimedRobot {
     }
 
     /**
-     * This shows how you can use {@link LimelightTargetingBuilder} to
-     * dynamically select an AprilTag to drive to
+     * @return the closest blue reef tag to the robot's current pose
      */
-    private Command nearestBlueReefTagCommand() {
+    private AprilTag closestBlueReefTag() {
 
         // this predicate will test whether the tag is a blue reef tag and
         // whether it's <10 feet from the pose of the robot whenever it is run
@@ -124,22 +130,9 @@ public class LimelightSimRobot extends TimedRobot {
             return reefTag && closeEnough;
         };
 
-        return drive.defer(() -> {
-
-            Pose2d currentPose = drive.getPose();
-            AprilTag tag = Util.getClosestAprilTagMatching(
-                    currentPose,
-                    tagSelector);
-
-            if (tag == null) {
-                Util.log("[ll-target] !!! NO BLUE REEF TAG AVAILABLE !!!");
-                return Commands.none();
-            }
-
-            // this will drive to a position 3 feet in front of the tag and
-            // then execute two-stage targeting
-            return builder.threeStageTargetingCommand(tag, 3.0, null);
-        });
+        return Util.getClosestAprilTagMatching(
+                drive.getPose(),
+                tagSelector);
     }
 
     @Override

@@ -97,48 +97,55 @@ public class LimelightSim {
     }
 
     /**
-     * Determines whether a tag is in "view" of the robot
-     */
-    private boolean tagIsInView(AprilTag tag) {
-
-        Pose2d currentPose = poseSupplier.get();
-        Pose2d tagPose = tag.pose.toPose2d();;
-
-        // if the tag is too far away, forget about it
-        if (Util.feetBetween(currentPose, tagPose) > detectionDistance) {
-            return false;
-        }
-
-        // if the tag falls within the cone of visibility in front of the
-        // robot we'll accept it
-        double halfAngle = detectionAngle / 2.0;
-        double degrees = tagPose.relativeTo(currentPose)
-                .getTranslation()
-                .getAngle()
-                .getDegrees();
-        return degrees < halfAngle && degrees > -halfAngle;
-    }
-
-    /**
      * Called every frame to determine whether we can see a tag, and supply
      * targeting data for it
      */
     public void updateFakePoses() {
 
         Pose2d currentPose = poseSupplier.get();
+        AprilTag closestTag = null;
+        Pose2d tagPose = null;
+        Translation2d tagTranslation = null;
+        double tagDistance = Double.POSITIVE_INFINITY;
 
-        // get the closest tag and compute the distance to it
-        AprilTag tag = Util.getClosestAprilTagMatching(currentPose, this::tagIsInView);
-        Pose2d tagPose = tag == null
-                ? Util.NAN_POSE
-                : tag.pose.toPose2d();
+        // this goes through all the AprilTags and determines which one is
+        // the closest which is "in view" of the camera
+        for (AprilTag thisTag : Util.getFieldLayout().getTags()) {
 
-        // if there is no tag in view, we we won't publish any of the fake
-        // LL information
-        double distanceToTag = tag == null
-                ? Double.POSITIVE_INFINITY
-                : Util.feetBetween(tagPose, currentPose);
-        if (tag == null || distanceToTag > detectionDistance) {
+            // basic distance check - if it's too far away (or farther away
+            // than the current closest tag) we ignore it
+            Pose2d thisPose = thisTag.pose.toPose2d();
+            double thisDistance = Util.feetBetween(currentPose, thisPose);
+            if (thisDistance > detectionDistance || thisDistance > tagDistance) {
+                continue;
+            }
+
+            // this gives us the tag's position relative to the robot; +X
+            // means the tag is in front of the robot; +Y means it's to the
+            // left of the robot
+            Translation2d thisTranslation = thisPose
+                    .relativeTo(currentPose)
+                    .getTranslation();
+
+            // camera angle check - we get the angle of the tag off the robot's
+            // straight-line heading; this is the "field of view". if it's too
+            // big, we will ignore the tag
+            double halfAngle = detectionAngle / 2.0;
+            double degrees = thisTranslation.getAngle().getDegrees();
+            if (degrees > halfAngle && degrees < -halfAngle) {
+                continue;
+            }
+
+            closestTag = thisTag;
+            tagDistance = thisDistance;
+            tagTranslation = thisTranslation;
+            tagPose = thisPose;
+        }
+
+        // if we went through all of that and didn't find a tag, we will
+        // pretend their is no tag in view, and clear out all the LL pose
+        // and targeting information
+        if (tagPose == null) {
             classicPublisher.accept(NO_TAG);
             megaTagPublisher.accept(NO_TAG);
             txPublisher.accept(0.0);
@@ -147,30 +154,24 @@ public class LimelightSim {
             return;
         }
 
-        Translation2d heading = tagPose
-                .relativeTo(currentPose)
-                .getTranslation();
+        // if we do have a tag, we will fake the tag area using its distance
+        // from the robot (+X) and the offset using it's left-right offset
+        // from the robot (+/-Y)
+        double tagArea = 1.0 / tagTranslation.getX();
+        double tagOffset = tagTranslation.getY();
 
-//        double tagArea = 1.0 - (distanceToTag / detectionDistance);
-//        double tagOffset = TAG_POSITION.getX() - currentPose.getX();
-
-        double tagArea = 1.0 / heading.getX();
-        double tagOffset = heading.getY();
-
-        // generate a fake pose estimate for the classic algorithm
-
+        // let's report the pose for the classic algorithm
         double [] classicPose = generateFakePoseInfo(
             currentPose.getTranslation(),
             currentPose.getRotation(),
-            tag,
-            distanceToTag,
+            closestTag,
+            tagDistance,
             tagArea);
         classicPublisher.accept(classicPose);
 
         // we will report the mega tag algorithm with the same details,
         // but its error going in the opposite direction, to differentiate
         // it from the mega tag pose
-
         double [] megaTagPose = Arrays.copyOf(classicPose, classicPose.length);
         megaTagPose[0] -= 2.0 * poseError;
         megaTagPose[1] -= 2.0 * poseError;
@@ -179,13 +180,14 @@ public class LimelightSim {
         // and finally, we'll update the basic targeting info
         txPublisher.accept(tagOffset);
         taPublisher.accept(tagArea);
-        tidPublisher.accept(tag.ID);
+        tidPublisher.accept(closestTag.ID);
 
     }
 
     /*
      * This creates fake bot pose information for the robot, in the format that
-     * the Limelight would generate it.
+     * the Limelight would generate it. This is what we use for pose estimation
+     * in the Limelight.
      */
     private double [] generateFakePoseInfo(
                     Translation2d robotPosition, 
@@ -201,8 +203,8 @@ public class LimelightSim {
             // the LL is calculating where it "thinks" the robot is by using 
             // vision recognition and AprilTag information. this is pretty good,
             // but always a little bit off; we'll simulate that by using a small
-            // tx from the robot's current pose. and we'll assume the robot
-            // isn't going to leave the ground.
+            // translation from the robot's current pose.( and we'll assume the
+            // robot isn't going to leave the ground.)
             robotPosition.getX() + poseError,
             robotPosition.getY() + poseError,
             0.0,
@@ -218,12 +220,11 @@ public class LimelightSim {
             1.0, // tag count
             0.0, // tag span (we don't use this)
             distanceToTag, // average distance from camera
-            tagArea, // average tag ta
-
+            tagArea, // average tag area
             tag.ID, // tag ID
             1.0, // horizontal tx to primary pixel
             1.0, // vertical tx to primary pixel
-            tagArea, // tag ta
+            tagArea, // tag t area
             distanceToTag, // distance to camera
             distanceToTag, // distance to robot
             0.3  // ambiguity

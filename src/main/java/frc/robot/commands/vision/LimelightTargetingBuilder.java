@@ -15,6 +15,7 @@ import frc.robot.subsystems.vision.LimelightSubsystem;
 import frc.robot.subsystems.vision.LimelightSubsystem.LimelightTarget;
 import frc.robot.util.Util;
 
+import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -46,14 +47,39 @@ public class LimelightTargetingBuilder {
     }
 
     /**
-     * Creates a command that will use visual servo logic to center the robot
-     * in front of the currently in-view AprilTag, and optionally drive to an
-     * offset from that position. This is basically our 2025 Reefscape
-     * targeting logic.
+     * Implements our 2025 multi-stage targeting logic. This will:
+     * <ul>
+     *
+     *     <li>Rotate the robot to the appropriate heading to face the
+     *     supplied tag. If the tag slips out of view during this step,
+     *     we will stop and not proceed to the next step.</li>
+     *
+     *     <li>Use "visual servoing" to align the robot to a repeatable
+     *     position in front of the tag. Again, if the tag slips out of view
+     *     while we are doing this, we will stop and not proceed. Then,</li>
+     *
+     *     <li>Drive to an optional offset from that point. We used this to
+     *     implement a "score left / right" distinction based on the shape of
+     *     the game field.</li>
+     * </ul>
      */
-    public Command twoStageTargetingCommand(Translation2d offset) {
+    public Command reefscapeTargetingCommand(AprilTag tag,
+                                             Translation2d offset) {
 
-        Command print = Commands.print("[ll-target] executing two-stage targeting");
+        Command print = Commands.print("[ll-target] reefscape targeting on tag "+tag.ID);
+
+        // this is the heading that is directly facing the tag (we flip the
+        // tag's heading by 180 degrees because the tag is facing "out" from
+        // where it's mounted)
+        Rotation2d facingHeading = tag.pose.toPose2d()
+                .getRotation()
+                .plus(Rotation2d.k180deg);
+
+        // this rotates us to that heading, stopping if the tag slips out
+        // of view while we're doing it
+        Command rotate = relativePoseCommand(currentPose -> new Pose2d(
+                currentPose.getTranslation(),
+                facingHeading));
 
         // use the visual servo approach to align as accurately as possible to
         // where the current tag is in the real world
@@ -64,42 +90,35 @@ public class LimelightTargetingBuilder {
 
         // if there is no offset, this is all we'll do
         if (offset == null) {
-            return print.andThen(servo);
+            return print
+                    .andThen(rotate)
+                    .andThen(servo)
+                    .onlyWhile(tagInView(tag));
         }
 
-        // this will drive us to the offset position. we defer the creation of
-        // the command in case the servo command fails and we finish with the
-        // tag out-of-view
-        Command driveToOffset = driveSubsystem.defer(() -> {
-
-            if (limelight.getCurrentTarget() == null) {
-                Util.log("[ll-target] !!! NO TAG IN VIEW !!!");
-                return Commands.none();
-            }
-
-            return relativePoseCommand(currentPose -> new Pose2d(
-                    currentPose.getTranslation().plus(offset),
-                    currentPose.getRotation()));
-        });
+        // otherwise, we will drive to the offset position
+        Command driveToOffset = relativePoseCommand(currentPose -> new Pose2d(
+                currentPose.getTranslation().plus(offset),
+                currentPose.getRotation()));
 
         return print
+                .andThen(rotate)
                 .andThen(servo)
-                .andThen(driveToOffset);
+                .andThen(driveToOffset)
+                .onlyWhile(tagInView(tag));
     }
 
     /**
-     * Creates a command that will drive the robot in front of the specified
-     * tag based purely on odometry, and then execute the two-stage targeting
-     * logic above. This is superior because you can start with no tag in
-     * view.
+     * This is slightly better than the reefscape targeting approach. Instead
+     * of just rotating to face the tag, we will drive to a specific position
+     * in front of the tag. This would allow us to target a tag without even
+     * having it in view.
      */
-    public Command threeStageTargetingCommand(AprilTag tag,
-                                              double feetInFrontOfTag,
-                                              Translation2d offset) {
+    public Command swankyTargetingCommand(AprilTag tag,
+                                          double feetInFrontOfTag,
+                                          Translation2d offset) {
 
-        Pose2d tagPose = tag.pose.toPose2d();
-
-        Command print = Commands.print("beginning three-stage targeting to "+tag.ID);
+        Command print = Commands.print("[ll-target] swanky targeting on tag "+tag.ID);
 
         // this transformation will produce a starting pose which is in front
         // of the tag by the specified number of feet, and pointing back to
@@ -107,20 +126,23 @@ public class LimelightTargetingBuilder {
         Transform2d transform = new Transform2d(
                 new Translation2d(Units.feetToMeters(feetInFrontOfTag), 0.0),
                 Rotation2d.k180deg);
-        Pose2d startPose = tagPose.transformBy(transform);
-        Command driveToStart = absolutePoseCommand(startPose);
+
+        Command driveToStart = absolutePoseCommand(tag.pose.toPose2d()
+                .transformBy(transform));
 
         // use the visual servo approach to align as accurately as possible to
         // where the current tag is in the real world
         Command servo = new LimelightVisualServoCommand(
                 limelight,
                 driveSubsystem,
-                speedConsumer,
-                tag);
+                speedConsumer);
 
         // if there is no offset, this is all we'll do
         if (offset == null) {
-            return print.andThen(driveToStart).andThen(servo);
+            return print
+                    .andThen(driveToStart)
+                    .andThen(servo)
+                    .onlyWhile(tagInView(tag));
         }
 
         // this will drive us to the offset position. we defer the creation of
@@ -143,11 +165,12 @@ public class LimelightTargetingBuilder {
         return print
                 .andThen(driveToStart)
                 .andThen(servo)
-                .andThen(driveToOffset);
+                .andThen(driveToOffset)
+                .onlyWhile(tagInView(tag));
     }
 
     /**
-     * Creates a command to drive to an absolute position on the field
+     * @return a command to drive to an absolute position on the field
      */
     private Command absolutePoseCommand(Pose2d pose) {
         return new SwerveAutoPoseCommand(
@@ -158,7 +181,7 @@ public class LimelightTargetingBuilder {
     }
 
     /**
-     * Creates a command that will drive to a new pose which is based on
+     * @return a command that will drive to a new pose which is based on
      * transforming the current pose of the robot when the command starts
      */
     private Command relativePoseCommand(Function<Pose2d,Pose2d> poseFunction) {
@@ -167,5 +190,20 @@ public class LimelightTargetingBuilder {
             Pose2d newPose = poseFunction.apply(oldPose);
             return absolutePoseCommand(newPose);
         });
+    }
+
+    /**
+     * @return a {@link BooleanSupplier} that returns true if the specified tag
+     * is in view (it's used to help us cancel sub-commands if a tag slips out
+     * of view)
+     */
+    private BooleanSupplier tagInView(AprilTag tag) {
+        return () -> {
+            if (limelight.isTagInView(tag)) {
+                return true;
+            }
+            Util.log("[ll-target] !!! TAG %d is not in view", tag.ID);
+            return false;
+        };
     }
 }

@@ -3,7 +3,6 @@ package frc.robot.subsystems.vision;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.robot.subsystems.swerve.SwerveDriveSubsystem;
 import frc.robot.util.Util;
 import gg.questnav.questnav.PoseFrame;
 import gg.questnav.questnav.QuestNav;

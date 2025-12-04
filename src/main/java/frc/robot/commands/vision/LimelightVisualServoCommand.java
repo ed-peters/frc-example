@@ -1,6 +1,5 @@
 package frc.robot.commands.vision;
 
-import edu.wpi.first.apriltag.AprilTag;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -53,7 +52,6 @@ public class LimelightVisualServoCommand extends Command {
     final LimelightSubsystem limelight;
     final PIDController pidArea;
     final PIDController pidOffset;
-    final AprilTag desiredTag;
     double lastOffset;
     double lastArea;
     double lastSpeedX;
@@ -65,18 +63,10 @@ public class LimelightVisualServoCommand extends Command {
     public LimelightVisualServoCommand(LimelightSubsystem limelight,
                                        Subsystem driveSubsystem,
                                        Consumer<ChassisSpeeds> speedConsumer) {
-        this(limelight, driveSubsystem, speedConsumer, null);
-    }
-
-    public LimelightVisualServoCommand(LimelightSubsystem limelight,
-                                       Subsystem driveSubsystem,
-                                       Consumer<ChassisSpeeds> speedConsumer,
-                                       AprilTag desiredTag) {
         this.limelight = limelight;
         this.speedConsumer = speedConsumer;
         this.pidArea = new PIDController(servoAreaP.getAsDouble(), 0.0, servoAreaD.getAsDouble());
         this.pidOffset = new PIDController(servoOffsetP.getAsDouble(), 0.0, servoOffsetD.getAsDouble());
-        this.desiredTag = desiredTag;
         addRequirements(driveSubsystem);
     }
 
@@ -97,28 +87,13 @@ public class LimelightVisualServoCommand extends Command {
     @Override
     public void execute() {
 
+        // we can only do this if we have a tag in view
         LimelightTarget target = limelight.getCurrentTarget();
-
-        boolean canTarget = true;
-
-        // if we lose sight of any tag, we can't do anything
         if (target == null) {
             Util.log("[ll-target] NO TAG IN VIEW !!!");
             running = false;
             return;
         }
-
-        // if we don't have the correct tag in view, we also quit
-        if (desiredTag != null && desiredTag.ID != target.id()) {
-            Util.log("[ll-target] WRONG TAG IN VIEW: wanted %d, got %d !!!",
-                    desiredTag.ID,
-                    target.id());
-            running = false;
-            return;
-        }
-
-        lastSpeedX = 0.0;
-        lastSpeedY = 0.0;
 
         // ta is how big the tag is in the camera frame; bigger means we're
         // closer to the tag (and hence we want to move in the -X direction)
@@ -132,6 +107,7 @@ public class LimelightVisualServoCommand extends Command {
 
         // calculate X speed (forward-back) if the tag is either too big or
         // to small in the camera frame
+        lastSpeedX = 0.0;
         if (!achievedArea) {
             lastSpeedX = pidArea.calculate(lastArea, servoAreaTarget.getAsDouble());
             achievedArea = pidArea.atSetpoint();
@@ -139,12 +115,11 @@ public class LimelightVisualServoCommand extends Command {
 
         // calculate the Y speed (left-right) if the tag is to the right or
         // left of the desired tx
+        lastSpeedY = 0.0;
         if (!achievedOffset) {
             lastSpeedY = pidOffset.calculate(lastOffset, servoOffsetTarget.getAsDouble());
             achievedOffset = pidOffset.atSetpoint();
         }
-
-        Util.log("%.2f --> %.2f", lastOffset, lastSpeedY);
 
         // we will run until we've hit both objectives
         running = !(achievedArea && achievedOffset);

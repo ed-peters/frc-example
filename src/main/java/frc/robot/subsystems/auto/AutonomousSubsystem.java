@@ -59,7 +59,7 @@ public class AutonomousSubsystem extends SubsystemBase {
         // there's a lot happening under the covers here, and PathPlanner
         // might generate an error if there's a problem with config files,
         // or calculating a path, or something like that.
-
+        //
         // we don't want the entire robot to crash if there's a problem
         // with autonomous, so we wrap this whole thing with an exception
         // handler. if there is an error, we will log it and then use our
