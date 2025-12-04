@@ -72,7 +72,7 @@ public class LimelightTargetingBuilder {
         // tag out-of-view
         Command driveToOffset = driveSubsystem.defer(() -> {
 
-            if (limelight.getCurrentTarget() == LimelightTarget.NO_TARGET) {
+            if (limelight.getCurrentTarget() == null) {
                 Util.log("[ll-target] !!! NO TAG IN VIEW !!!");
                 return Commands.none();
             }
@@ -99,19 +99,51 @@ public class LimelightTargetingBuilder {
 
         Pose2d tagPose = tag.pose.toPose2d();
 
+        Command print = Commands.print("beginning three-stage targeting to "+tag.ID);
+
         // this transformation will produce a starting pose which is in front
         // of the tag by the specified number of feet, and pointing back to
         // look at the tag
         Transform2d transform = new Transform2d(
                 new Translation2d(Units.feetToMeters(feetInFrontOfTag), 0.0),
                 Rotation2d.k180deg);
+        Pose2d startPose = tagPose.transformBy(transform);
+        Command driveToStart = absolutePoseCommand(startPose);
 
-        Command print = Commands.print("[ll-target] driving to tag "+tag.ID);
+        // use the visual servo approach to align as accurately as possible to
+        // where the current tag is in the real world
+        Command servo = new LimelightVisualServoCommand(
+                limelight,
+                driveSubsystem,
+                speedConsumer,
+                tag);
+
+        // if there is no offset, this is all we'll do
+        if (offset == null) {
+            return print.andThen(driveToStart).andThen(servo);
+        }
+
+        // this will drive us to the offset position. we defer the creation of
+        // the command in case the servo command fails and we finish with the
+        // tag out-of-view
+        Command driveToOffset = driveSubsystem.defer(() -> {
+
+            LimelightTarget target = limelight.getCurrentTarget();
+            if (target == null || target.id() != tag.ID) {
+                Util.log("[ll-target] !!! LOST VIEW OF TAG !!!");
+                return Commands.none();
+            }
+
+            return relativePoseCommand(currentPose -> new Pose2d(
+                    currentPose.getTranslation().plus(offset),
+                    currentPose.getRotation()));
+        });
 
         // drive to the starting pose and then do two-stage targeting
         return print
-                .andThen(absolutePoseCommand(tagPose.transformBy(transform)))
-                .andThen(twoStageTargetingCommand(offset));
+                .andThen(driveToStart)
+                .andThen(servo)
+                .andThen(driveToOffset);
     }
 
     /**

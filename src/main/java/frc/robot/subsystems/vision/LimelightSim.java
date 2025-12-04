@@ -1,5 +1,6 @@
 package frc.robot.subsystems.vision;
 
+import edu.wpi.first.apriltag.AprilTag;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
@@ -9,6 +10,7 @@ import edu.wpi.first.networktables.DoublePublisher;
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import frc.robot.util.Util;
 
 import java.util.Arrays;
 import java.util.function.Supplier;
@@ -35,8 +37,6 @@ public class LimelightSim {
 
     public static final double [] NO_TAG = new double[0];
 
-    public static final double TAG_ID = 16.0;
-
     /**
      * This is the position on the field of AprilTag 16 in the 2025 game
      * (this is the one on the blue algae chute). If you drive the robot
@@ -47,11 +47,16 @@ public class LimelightSim {
             0.0);
 
     /**
-     * This is the radius around the tag inside which we will pretend to
-     * "see" the tag - driving this close to the tag will result in position
-     * updates and targeting information showing up in NT
+     * This is the angle (in degrees) of the cone in front of the robot that
+     * will be used for detecting tags
      */
-    public static final double DEFAULT_DETECTION_RADIUS = Units.feetToMeters(10.0);
+    public static final double DEFAULT_DETECTION_ANGLE = 120.0;
+
+    /**
+     * This is the maximum distance away (in feet) a tag can be from the robot
+     * for us to consider it visible
+     */
+    public static final double DEFAULT_DETECTION_DISTANCE = 6.0;
 
     /**
      * We add a little "noise" to the LL pose estimates, so we can tell them
@@ -66,13 +71,15 @@ public class LimelightSim {
     final DoublePublisher txPublisher;
     final DoublePublisher tidPublisher;
     final Supplier<Pose2d> poseSupplier;
-    double detectionRadius;
+    double detectionDistance;
+    double detectionAngle;
     double poseError;
 
     public LimelightSim(Supplier<Pose2d> poseSupplier) {
 
         this.poseSupplier = poseSupplier;
-        this.detectionRadius = DEFAULT_DETECTION_RADIUS;
+        this.detectionDistance = DEFAULT_DETECTION_DISTANCE;
+        this.detectionAngle = DEFAULT_DETECTION_ANGLE;
         this.poseError = DEFAULT_POSE_ERROR;
 
         NetworkTable table = NetworkTableInstance.getDefault().getTable(limelightName);
@@ -83,23 +90,55 @@ public class LimelightSim {
         txPublisher = table.getDoubleTopic("tx").publish();
 
         SmartDashboard.putData("LimelightSim", builder -> {
-            builder.addDoubleProperty("DetectionRadius", () -> detectionRadius, val -> detectionRadius = val);
+            builder.addDoubleProperty("DetectionAngle", () -> detectionAngle, val -> detectionAngle = val);
+            builder.addDoubleProperty("DetectionRadius", () -> detectionDistance, val -> detectionDistance = val);
             builder.addDoubleProperty("PoseError", () -> poseError, val -> poseError = val);
         });
     }
 
+    /**
+     * Determines whether a tag is in "view" of the robot
+     */
+    private boolean tagIsInView(AprilTag tag) {
+
+        Pose2d currentPose = poseSupplier.get();
+        Pose2d tagPose = tag.pose.toPose2d();;
+
+        // if the tag is too far away, forget about it
+        if (Util.feetBetween(currentPose, tagPose) > detectionDistance) {
+            return false;
+        }
+
+        // if the tag falls within the cone of visibility in front of the
+        // robot we'll accept it
+        double halfAngle = detectionAngle / 2.0;
+        double degrees = tagPose.relativeTo(currentPose)
+                .getTranslation()
+                .getAngle()
+                .getDegrees();
+        return degrees < halfAngle && degrees > -halfAngle;
+    }
+
+    /**
+     * Called every frame to determine whether we can see a tag, and supply
+     * targeting data for it
+     */
     public void updateFakePoses() {
 
-        Pose2d odometry = poseSupplier.get();
+        Pose2d currentPose = poseSupplier.get();
 
-        // we'll only fake pose estimates if the robot is within a few
-        // meters of the tag
+        // get the closest tag and compute the distance to it
+        AprilTag tag = Util.getClosestAprilTagMatching(currentPose, this::tagIsInView);
+        Pose2d tagPose = tag == null
+                ? Util.NAN_POSE
+                : tag.pose.toPose2d();
 
-        double distanceToTag = odometry
-                .getTranslation()
-                .getDistance(TAG_POSITION);
-
-        if (distanceToTag > detectionRadius) {
+        // if there is no tag in view, we we won't publish any of the fake
+        // LL information
+        double distanceToTag = tag == null
+                ? Double.POSITIVE_INFINITY
+                : Util.feetBetween(tagPose, currentPose);
+        if (tag == null || distanceToTag > detectionDistance) {
             classicPublisher.accept(NO_TAG);
             megaTagPublisher.accept(NO_TAG);
             txPublisher.accept(0.0);
@@ -108,11 +147,22 @@ public class LimelightSim {
             return;
         }
 
-        double tagArea = 1.0 - (distanceToTag / detectionRadius);
+        Translation2d heading = tagPose
+                .relativeTo(currentPose)
+                .getTranslation();
+
+//        double tagArea = 1.0 - (distanceToTag / detectionDistance);
+//        double tagOffset = TAG_POSITION.getX() - currentPose.getX();
+
+        double tagArea = 1.0 / heading.getX();
+        double tagOffset = heading.getY();
+
+        // generate a fake pose estimate for the classic algorithm
 
         double [] classicPose = generateFakePoseInfo(
-            odometry.getTranslation(), 
-            odometry.getRotation(), 
+            currentPose.getTranslation(),
+            currentPose.getRotation(),
+            tag,
             distanceToTag,
             tagArea);
         classicPublisher.accept(classicPose);
@@ -127,10 +177,9 @@ public class LimelightSim {
         megaTagPublisher.accept(megaTagPose);
 
         // and finally, we'll update the basic targeting info
-
-        txPublisher.accept(TAG_POSITION.getX() - odometry.getX());
+        txPublisher.accept(tagOffset);
         taPublisher.accept(tagArea);
-        tidPublisher.accept(TAG_ID);
+        tidPublisher.accept(tag.ID);
 
     }
 
@@ -140,7 +189,8 @@ public class LimelightSim {
      */
     private double [] generateFakePoseInfo(
                     Translation2d robotPosition, 
-                    Rotation2d robotHeading, 
+                    Rotation2d robotHeading,
+                    AprilTag tag,
                     double distanceToTag,
                     double tagArea) {
 
@@ -170,7 +220,7 @@ public class LimelightSim {
             distanceToTag, // average distance from camera
             tagArea, // average tag ta
 
-            TAG_ID, // tag ID
+            tag.ID, // tag ID
             1.0, // horizontal tx to primary pixel
             1.0, // vertical tx to primary pixel
             tagArea, // tag ta
@@ -180,5 +230,4 @@ public class LimelightSim {
 
         };
     }
-
 }

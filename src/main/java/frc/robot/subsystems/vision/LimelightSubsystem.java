@@ -101,7 +101,7 @@ public class LimelightSubsystem extends SubsystemBase {
 
     /** @return information about the current in-view id */
     public LimelightTarget getCurrentTarget() {
-        return latestTarget;
+        return latestTarget.id > 0 ? latestTarget : null;
     }
 
     /** @return the current pose (null if there isn't one) */

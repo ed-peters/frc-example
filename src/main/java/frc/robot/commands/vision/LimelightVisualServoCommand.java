@@ -1,5 +1,6 @@
 package frc.robot.commands.vision;
 
+import edu.wpi.first.apriltag.AprilTag;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
@@ -11,16 +12,16 @@ import frc.robot.util.Util;
 
 import java.util.function.Consumer;
 
-import static frc.robot.commands.vision.LimelightConfig.enableLogging;
-import static frc.robot.commands.vision.LimelightConfig.servoAreaD;
-import static frc.robot.commands.vision.LimelightConfig.servoAreaP;
-import static frc.robot.commands.vision.LimelightConfig.servoAreaTarget;
-import static frc.robot.commands.vision.LimelightConfig.servoAreaTolerance;
-import static frc.robot.commands.vision.LimelightConfig.servoMaxFeedback;
-import static frc.robot.commands.vision.LimelightConfig.servoOffsetD;
-import static frc.robot.commands.vision.LimelightConfig.servoOffsetP;
-import static frc.robot.commands.vision.LimelightConfig.servoOffsetTarget;
-import static frc.robot.commands.vision.LimelightConfig.servoOffsetTolerance;
+import static frc.robot.commands.vision.LimelightTargetingConfig.enableLogging;
+import static frc.robot.commands.vision.LimelightTargetingConfig.servoAreaD;
+import static frc.robot.commands.vision.LimelightTargetingConfig.servoAreaP;
+import static frc.robot.commands.vision.LimelightTargetingConfig.servoAreaTarget;
+import static frc.robot.commands.vision.LimelightTargetingConfig.servoAreaTolerance;
+import static frc.robot.commands.vision.LimelightTargetingConfig.servoMaxFeedback;
+import static frc.robot.commands.vision.LimelightTargetingConfig.servoOffsetD;
+import static frc.robot.commands.vision.LimelightTargetingConfig.servoOffsetP;
+import static frc.robot.commands.vision.LimelightTargetingConfig.servoOffsetTarget;
+import static frc.robot.commands.vision.LimelightTargetingConfig.servoOffsetTolerance;
 
 /**
  * This implements the "visual servo" approach to aligning a robot to
@@ -39,6 +40,10 @@ import static frc.robot.commands.vision.LimelightConfig.servoOffsetTolerance;
  * By tuning this command you will be able to arrive at a reliable position
  * in front of a tag, which is an important step in targeting.</p>
  *
+ * The command takes an optional "desired tag" for use in situations where
+ * you are executing a complex targeting sequence and want to move to a
+ * particular target tag.</p>
+ *
  * This command is implemented so it doesn't depend on a specific swerve
  * drive implementation.</p>
  */
@@ -48,6 +53,7 @@ public class LimelightVisualServoCommand extends Command {
     final LimelightSubsystem limelight;
     final PIDController pidArea;
     final PIDController pidOffset;
+    final AprilTag desiredTag;
     double lastOffset;
     double lastArea;
     double lastSpeedX;
@@ -59,10 +65,18 @@ public class LimelightVisualServoCommand extends Command {
     public LimelightVisualServoCommand(LimelightSubsystem limelight,
                                        Subsystem driveSubsystem,
                                        Consumer<ChassisSpeeds> speedConsumer) {
+        this(limelight, driveSubsystem, speedConsumer, null);
+    }
+
+    public LimelightVisualServoCommand(LimelightSubsystem limelight,
+                                       Subsystem driveSubsystem,
+                                       Consumer<ChassisSpeeds> speedConsumer,
+                                       AprilTag desiredTag) {
         this.limelight = limelight;
         this.speedConsumer = speedConsumer;
         this.pidArea = new PIDController(servoAreaP.getAsDouble(), 0.0, servoAreaD.getAsDouble());
         this.pidOffset = new PIDController(servoOffsetP.getAsDouble(), 0.0, servoOffsetD.getAsDouble());
+        this.desiredTag = desiredTag;
         addRequirements(driveSubsystem);
     }
 
@@ -85,10 +99,20 @@ public class LimelightVisualServoCommand extends Command {
 
         LimelightTarget target = limelight.getCurrentTarget();
 
-        // if we lose sight of the id, we can't really do anything
-        // and we have to quit
-        if (target == null || target.id() < 1) {
+        boolean canTarget = true;
+
+        // if we lose sight of any tag, we can't do anything
+        if (target == null) {
             Util.log("[ll-target] NO TAG IN VIEW !!!");
+            running = false;
+            return;
+        }
+
+        // if we don't have the correct tag in view, we also quit
+        if (desiredTag != null && desiredTag.ID != target.id()) {
+            Util.log("[ll-target] WRONG TAG IN VIEW: wanted %d, got %d !!!",
+                    desiredTag.ID,
+                    target.id());
             running = false;
             return;
         }
@@ -119,6 +143,8 @@ public class LimelightVisualServoCommand extends Command {
             lastSpeedY = pidOffset.calculate(lastOffset, servoOffsetTarget.getAsDouble());
             achievedOffset = pidOffset.atSetpoint();
         }
+
+        Util.log("%.2f --> %.2f", lastOffset, lastSpeedY);
 
         // we will run until we've hit both objectives
         running = !(achievedArea && achievedOffset);
