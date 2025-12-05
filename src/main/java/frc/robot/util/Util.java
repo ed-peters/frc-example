@@ -42,26 +42,11 @@ public class Util {
     /** Time slice between calls to periodic() */
     public static final double DT = 0.02;
 
-    /** Zero heading */
-    public static final Rotation2d ZERO_ROTATION = new Rotation2d();
-
     /** Heading with no value */
     public static final Rotation2d NAN_ROTATION = new Rotation2d(Double.NaN);
 
-    /** Pose with all zeros */
-    public static final Pose2d ZERO_POSE = new Pose2d();
-
     /** Pose with no values */
     public static final Pose2d NAN_POSE = new Pose2d(Double.NaN, Double.NaN, NAN_ROTATION);
-
-    /** State with all zeros */
-    public static final State ZERO_STATE = new State();
-
-    /** State with no values */
-    public static final State NAN_STATE = new State(Double.NaN, Double.NaN);
-
-    /** Speed with all zeros */
-    public static final ChassisSpeeds ZERO_SPEED = new ChassisSpeeds(0.0, 0.0, 0.0);
 
     /** Speed with no values */
     public static final ChassisSpeeds NAN_SPEED = new ChassisSpeeds(Double.NaN, Double.NaN, Double.NaN);
@@ -97,22 +82,6 @@ public class Util {
      */
     public static double feetBetween(Pose2d start, Pose2d end) {
         return Units.metersToFeet(start.minus(end).getTranslation().getNorm());
-    }
-
-    /**
-     * @return a new supplier that returns true when the original supplier
-     * (a) returned true last time and (b) returns false this time (this
-     * captures a "falling edge", for example when a button was pressed and
-     * then gets released)
-     */
-    public static BooleanSupplier fallingEdge(BooleanSupplier supplier) {
-        AtomicBoolean wasTrue = new AtomicBoolean(false);
-        return () -> {
-            boolean isTrue = supplier.getAsBoolean();
-            boolean hasFallen = wasTrue.get() && !isTrue;
-            wasTrue.set(isTrue);
-            return hasFallen;
-        };
     }
 
     /**

@@ -9,10 +9,9 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
-import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import frc.robot.commands.swerve.SwerveTeleopCommand;
-import frc.robot.commands.vision.LimelightTargetingBuilder;
+import frc.robot.commands.vision.TargetingCommandBuilder;
 import frc.robot.subsystems.swerve.SwerveChassisSim;
 import frc.robot.subsystems.swerve.SwerveDriveSubsystem;
 import frc.robot.subsystems.swerve.SwervePoseCalculator.PoseType;
@@ -36,7 +35,7 @@ public class LimelightSimRobot extends TimedRobot {
     SwerveDriveSubsystem drive;
     LimelightSubsystem limelight;
     LimelightSim limelightSim;
-    LimelightTargetingBuilder builder;
+    TargetingCommandBuilder builder;
     CommandXboxController controller;
 
     public LimelightSimRobot() {
@@ -55,7 +54,7 @@ public class LimelightSimRobot extends TimedRobot {
         );
 
         // this will build some of our targeting commands for us
-        builder = new LimelightTargetingBuilder(
+        builder = new TargetingCommandBuilder(
                 limelight,
                 drive,
                 drive::getPose,

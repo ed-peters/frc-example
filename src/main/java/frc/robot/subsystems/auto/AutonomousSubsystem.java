@@ -256,6 +256,6 @@ public class AutonomousSubsystem extends SubsystemBase {
         // the alliance wall (blue is 0, red is 180)
         return Util.isRedAlliance()
                 ? new Pose2d(0.0, 0.0, Rotation2d.k180deg)
-                : Util.ZERO_POSE;
+                : Pose2d.kZero;
     }
 }

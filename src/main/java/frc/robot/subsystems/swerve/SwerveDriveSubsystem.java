@@ -43,12 +43,12 @@ public class SwerveDriveSubsystem extends SubsystemBase {
     public SwerveDriveSubsystem(SwerveChassis chassis) {
 
         this.chassis = chassis;
-        this.poseCalculator = new SwervePoseCalculator(chassis, Util.ZERO_POSE);
+        this.poseCalculator = new SwervePoseCalculator(chassis, Pose2d.kZero);
         this.kinematicsCalculator = new SwerveKinematicsCalculator(chassis);
         this.poseResetListeners = new ArrayList<>();
         this.latestSpeeds = Util.NAN_SPEED;
         this.latestGyroHeading = chassis.getGyroHeading();
-        this.latestPoseEstimate = Util.ZERO_POSE;
+        this.latestPoseEstimate = Pose2d.kZero;
         this.latestSpeeds = chassis.getCurrentSpeed();
         this.currentCommand = "";
 

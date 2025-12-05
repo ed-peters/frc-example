@@ -11,7 +11,6 @@ import frc.robot.util.Util;
 
 import java.util.function.Consumer;
 
-import static frc.robot.commands.vision.LimelightTargetingConfig.enableLogging;
 import static frc.robot.commands.vision.LimelightTargetingConfig.servoAreaD;
 import static frc.robot.commands.vision.LimelightTargetingConfig.servoAreaP;
 import static frc.robot.commands.vision.LimelightTargetingConfig.servoAreaTarget;
@@ -47,6 +46,12 @@ import static frc.robot.commands.vision.LimelightTargetingConfig.servoOffsetTole
  * drive implementation.</p>
  */
 public class LimelightVisualServoCommand extends Command {
+
+    /**
+     * Setting this to true will make this command publish a bunch of info
+     * to the dashboard that might be helpful for debugging
+     */
+    static final boolean enableLogging = false;
 
     final Consumer<ChassisSpeeds> speedConsumer;
     final LimelightSubsystem limelight;

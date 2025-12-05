@@ -1,8 +1,6 @@
 # Vision Commands
 
-These are commands that work with vision implementations and the `SwerveDriveSubsystem` to accomplish super-common tasks. A few learnings that are embedded here ...
-
-**Resetting the drive pose from the Limelight is insanely useful**. When you're setting up on a practice field, you need a way to tell the robot what it's pose is on the field. Doing this from an AprilTag is super-useful.
+These are commands that work with vision implementations and a swerve drive to accomplish super-common tasks. A few learnings that are embedded here ...
 
 **Odometry alone wasn't accurate enough for fine-grained targeting**. For 2025 we needed to be within a couple of inches of a target position. We tried using the Limelight's estimate of the target's 3D pose (specifically, `targetpose_robotspace`) to figure out where to drive for scoring. It's always off a little bit and, unfortunately, not in a predictable way so it's very hard to correct for. We MIGHT have been able to fix this with some kind of tuning, but ...
 
@@ -10,7 +8,7 @@ These are commands that work with vision implementations and the `SwerveDriveSub
 
 **We got mileage from a three-step process**. 2025 was our best year for automated targeting. We did it in three steps:
 
-* First you turn the robot to face the AprilTag. You do this by identifying the tag by number, looking up the pose of that tag on the field, and rotating to that heading.
+* First turn the robot to face the AprilTag. You do this by identifying the tag by number, looking up the pose of that tag on the field, and rotating to that heading.
 
 
 * Second, you align to the tag within the camera view. For our purpose, we wanted it centered (X offset = 0) and at a predictable distance (based on area).
@@ -18,5 +16,19 @@ These are commands that work with vision implementations and the `SwerveDriveSub
 
 * Finally, your "scoring position" may actually be out of view of the tag. So you add a little offset to the mix.
  
-This full algorithm is implemented in the `ThreeStageTargetingCommand`. But ...
+This full algorithm is implemented in [`TargetingCommandBuilder.java`](TargetingCommandBuilder.java) But ...
+ 
+**You can do just a bit better**. If you aren't directly in front of the tag, when you turn, you could lose sight of it. A slightly better approach is the following three steps:
+
+* Drive to a position in front of the tag and facing it; you can get the position pretty close, and the heading very close;
+
+
+* Make your alignment exact via visual servoing; and then,
+
+
+* Scoot to the offset.
+
+This "swanky" algorithm is implemented in [`TargetingCommandBuilder.java`](TargetingCommandBuilder.java)
+
+**It doesn't hurt to be cautious**. This logic will stop driving if it loses sight of the tag. The Limelight folks recommend implementing some kind of "search" algorithm, but we aren't using that.
  

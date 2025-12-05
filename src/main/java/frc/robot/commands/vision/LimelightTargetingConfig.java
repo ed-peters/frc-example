@@ -4,9 +4,10 @@ import java.util.function.DoubleSupplier;
 
 import static frc.robot.util.Util.pref;
 
+/**
+ * Configuration for Limelight-related targeting commands
+ */
 public class LimelightTargetingConfig {
-
-    public static final boolean enableLogging = true;
 
     // ==================================================================
     // LIMELIGHT VISUAL SERVO
@@ -39,12 +40,6 @@ public class LimelightTargetingConfig {
     // ==================================================================
     // LIMELIGHT TARGETING
     // ==================================================================
-
-    /**
-     * How close (in feet) do we have to be to a target before we will
-     * automatically drive there?
-     */
-    public static DoubleSupplier tagMaxDistance = pref("LimelightTargeting/MaxDistance", 10.0);
 
     /**
      * How far back from the tag (in feet) will we position ourself when we
