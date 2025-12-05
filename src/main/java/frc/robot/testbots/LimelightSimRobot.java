@@ -76,7 +76,7 @@ public class LimelightSimRobot extends TimedRobot {
         // be in view)
         controller.x().onTrue(drive.defer(() -> {
             AprilTag tag = closestBlueReefTag();
-            return builder.swankyTargetingCommand(tag, 3.0, null);
+            return builder.swankyTargetingCommand(tag, null);
         }));
 
         drive.setDefaultCommand(teleopCommand());
