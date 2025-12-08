@@ -129,29 +129,59 @@ public class SwerveSimRobot extends TimedRobot {
     }
 
     /**
-     * This is how you use a custom center of rotation to move the robot
-     * around an anchor point on the field
+     * This shows how you can combine (a) calculating a new heading so you are
+     * facing an object on the field, and (b) using a custom center of rotation,
+     * to rotate around a field object (in this case, the blue reef)
      */
     private Command rotateAroundReefCommand(double degreesPerSecond) {
 
-        ChassisSpeeds speeds = new ChassisSpeeds(
+        // this is the pose of the blue reef on the 2025 Reefscape fields
+        // (we don't really care about the heading)
+        Pose2d reefCenter = new Pose2d(new Translation2d(
+                Units.inchesToMeters(144.0 + (209.49 - 144.0) / 2.0),
+                Units.inchesToMeters(130.17 + (186.82 - 130.17) / 2.0)),
+                Rotation2d.kZero);
+
+        // this is how fast we will rotate around the reef, once we're
+        // facing it
+        ChassisSpeeds rotateAroundReefSpeed = new ChassisSpeeds(
                 0.0,
                 0.0,
                 Math.toRadians(degreesPerSecond));
 
-        // this is the center of the blue reef on the 2025 Reefscape fields
-        Translation2d reefCenter = new Translation2d(
-                Units.inchesToMeters(144.0 + (209.49 - 144.0) / 2.0),
-                Units.inchesToMeters(130.17 + (186.82 - 130.17) / 2.0));
-
-        // when we run, we calculate the relative position of the reef center
-        // to the center of the robot, and that becomes our center of rotation
+        // we defer our calculations until the moment the command is run, since
+        // they depend on the current position of the robot
         return drive.defer(() -> {
-            Translation2d robotCenter = drive.getPose().getTranslation();
-            Translation2d relativeCenter = reefCenter.minus(robotCenter);
-            return drive.run(() -> {
-                drive.drive("rotate-reef", speeds, relativeCenter);
+
+            // this calculates where the reef center is relative to the robot at
+            // the moment the command starts
+            Pose2d relativeCenter = reefCenter.relativeTo(drive.getPose());
+
+            // this is the heading that will face the robot in the direction of the
+            // center of the reef
+            Rotation2d rotationAngle = drive.getHeading().plus(
+                    relativeCenter.getTranslation().getAngle());
+
+            // this command will face the robot in that direction
+            Command faceReef = moveToFixedPose(new Pose2d(
+                    drive.getPose().getTranslation(), 
+                    rotationAngle));
+
+            // once we're facing the reef, the center of rotation is directly
+            // in front of us, at the same distance it was earlier
+            Translation2d centerOfRotation = new Translation2d(
+                    relativeCenter.getTranslation().getNorm(),
+                    0.0);
+
+            // this will move us around that center of rotation
+            Command rotateAroundReef = drive.run(() -> {
+                drive.drive(
+                        "rotate-reef", 
+                        rotateAroundReefSpeed, 
+                        centerOfRotation);
             });
+
+            return faceReef.andThen(rotateAroundReef);
         });
     }
 

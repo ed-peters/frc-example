@@ -66,6 +66,7 @@ public class LimelightSubsystem extends SubsystemBase {
         this.poseSupplier = poseSupplier;
         this.estimateConsumer = estimateConsumer;
         this.latestTarget = LimelightTarget.NO_TARGET;
+        this.latestPoseEstimate = new LimelightPoseEstimate(0.0);
 
         SmartDashboard.putData("LimelightSubsystem", builder -> {
             builder.addStringProperty("PoseEstimate/Algorithm", () -> useMegaTag2.getAsBoolean() ? "megaTag2" : "classic", null);
