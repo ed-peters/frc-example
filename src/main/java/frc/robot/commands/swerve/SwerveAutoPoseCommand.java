@@ -5,13 +5,13 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
-import edu.wpi.first.math.trajectory.TrapezoidProfile.State;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import frc.robot.util.MotionProfile;
+import frc.robot.util.MotionProfile.State;
 import frc.robot.util.Util;
 
 import java.util.function.Consumer;
@@ -245,11 +245,11 @@ public class SwerveAutoPoseCommand extends Command {
 
         // the velocity is the base component of our turning speed - it's like
         // a "feedforward" component
-        double desiredSpeed = desiredState.velocity;
+        double desiredSpeed = desiredState.velocity();
 
         // this is the actual position where we should be at this time
         Rotation2d desiredHeading = startPose.getRotation()
-                .plus(Rotation2d.fromDegrees(desiredState.position));
+                .plus(Rotation2d.fromDegrees(desiredState.position()));
 
         // we compare actual vs desired position to add feedback to speed and
         // correct for discrepancies
@@ -279,14 +279,14 @@ public class SwerveAutoPoseCommand extends Command {
         // this decomposes the speed (in feet per second) into X and Y
         // components using the cos and sin we already calculated; as with
         // rotation this is "feedforward"
-        double speedX = desiredState.velocity * cos;
-        double speedY = desiredState.velocity * sin;
+        double speedX = desiredState.velocity() * cos;
+        double speedY = desiredState.velocity() * sin;
 
         // this does the same for position (but calculates it in meters, since
         // that's what Pose2d uses, and then updates desired speed based on
         // feedback
-        double positionX = startPose.getX() + Units.feetToMeters(desiredState.position * cos);
-        double positionY = startPose.getY() + Units.feetToMeters(desiredState.position * sin);
+        double positionX = startPose.getX() + Units.feetToMeters(desiredState.position() * cos);
+        double positionY = startPose.getY() + Units.feetToMeters(desiredState.position() * sin);
 
         // here's where we calculate feedback in the X and Y directions based
         // on how far off we are from the desired X/Y
@@ -313,8 +313,8 @@ public class SwerveAutoPoseCommand extends Command {
 
         // rotation and translation are separate motions; one may complete
         // before the other, but we aren't done until both are complete
-        boolean rotationDone = skipRotation || rotationProfile.isFinished(time);
-        boolean translationDone = skipTranslation || translationProfile.isFinished(time);
+        boolean rotationDone = skipRotation || rotationProfile.isFinishedAt(time);
+        boolean translationDone = skipTranslation || translationProfile.isFinishedAt(time);
 
         return rotationDone && translationDone;
     }

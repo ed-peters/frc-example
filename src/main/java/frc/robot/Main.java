@@ -6,9 +6,8 @@ package frc.robot;
 
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.RobotBase;
-import frc.robot.testbots.SwerveSimRobot;
-import frc.robot.testbots.ElevatorSimRobot;
 import frc.robot.testbots.LimelightSimRobot;
+import frc.robot.testbots.MotionProfileRobot;
 
 public final class Main {
   private Main() {}
@@ -19,7 +18,8 @@ public final class Main {
 
   public static void main(String... args) {
     // RobotBase.startRobot(ElevatorSimRobot::new);
-     RobotBase.startRobot(SwerveSimRobot::new);
+    //  RobotBase.startRobot(SwerveSimRobot::new);
+     RobotBase.startRobot(MotionProfileRobot::new);
     //  RobotBase.startRobot(LimelightSimRobot::new);
   }
 }
