@@ -183,9 +183,8 @@ public class DigitBoard {
     }
 
     /**
-     * Writes the first 4 characters of the supplied string to the
-     * display (the string will be right-padded with spaces if it's
-     * not long enough)
+     * Writes the first 4 characters of the supplied string to the display
+     * (the string will be right-padded with spaces if it's not long enough)
      */
     public void display(String output) {
         writeToBuffer(output+"      ");

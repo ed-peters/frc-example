@@ -1,5 +1,6 @@
 package frc.robot.util;
 
+import edu.wpi.first.apriltag.AprilTag;
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.math.MathUtil;
@@ -10,6 +11,7 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.trajectory.TrapezoidProfile.State;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.networktables.BooleanEntry;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.networktables.StructPublisher;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -23,6 +25,7 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
+import java.util.function.Predicate;
 
 /**
  * Basic utility functions that can be useful
@@ -39,26 +42,11 @@ public class Util {
     /** Time slice between calls to periodic() */
     public static final double DT = 0.02;
 
-    /** Zero heading */
-    public static final Rotation2d ZERO_ROTATION = new Rotation2d();
-
     /** Heading with no value */
     public static final Rotation2d NAN_ROTATION = new Rotation2d(Double.NaN);
 
-    /** Pose with all zeros */
-    public static final Pose2d ZERO_POSE = new Pose2d();
-
     /** Pose with no values */
     public static final Pose2d NAN_POSE = new Pose2d(Double.NaN, Double.NaN, NAN_ROTATION);
-
-    /** State with all zeros */
-    public static final State ZERO_STATE = new State();
-
-    /** State with no values */
-    public static final State NAN_STATE = new State(Double.NaN, Double.NaN);
-
-    /** Speed with all zeros */
-    public static final ChassisSpeeds ZERO_SPEED = new ChassisSpeeds(0.0, 0.0, 0.0);
 
     /** Speed with no values */
     public static final ChassisSpeeds NAN_SPEED = new ChassisSpeeds(Double.NaN, Double.NaN, Double.NaN);
@@ -90,21 +78,11 @@ public class Util {
     }
 
     /**
-     * @return a new supplier that returns true when the original supplier
-     * (a) returned true last time and (b) returns false this time (this
-     * captures a "falling edge", for example when a button was pressed and
-     * then gets released)
+     * @return the distance between the two poses in feet
      */
-    public static BooleanSupplier fallingEdge(BooleanSupplier supplier) {
-        AtomicBoolean wasTrue = new AtomicBoolean(false);
-        return () -> {
-            boolean isTrue = supplier.getAsBoolean();
-            boolean hasFallen = wasTrue.get() && !isTrue;
-            wasTrue.set(isTrue);
-            return hasFallen;
-        };
+    public static double feetBetween(Pose2d start, Pose2d end) {
+        return Units.metersToFeet(start.minus(end).getTranslation().getNorm());
     }
-
 
     /**
      * Resets a PID controller to use the most recent tuning constants
@@ -128,19 +106,45 @@ public class Util {
     // first time we request id info)
     static AprilTagFieldLayout layout = null;
 
-    /** @return information about the supplied AprilTag */
-    public static Pose2d getAprilTagPose(int id) {
+    /**
+     * @return the current {@link AprilTagFieldLayout}
+     */
+    public static AprilTagFieldLayout getFieldLayout() {
+        // in 2025 there was an issue where the field measurements were
+        // different depending on which vendor made the field; if this
+        // comes up again you might need to make a configurable property
+        // to indicate which field layout to use
         if (layout == null) {
-
-            // in 2025 there was an issue where the field measurements were
-            // different depending on which vendor made the field; if this
-            // comes up again you might need to make a configurable property
-            // to indicate which field layout to use
             layout = AprilTagFieldLayout.loadField(AprilTagFields.kDefaultField);
         }
-        Optional<Pose3d> pose = layout.getTagPose(id);
+        return layout;
+    }
+
+    /** @return information about the supplied AprilTag */
+    public static Pose2d getAprilTagPose(int id) {
+        Optional<Pose3d> pose = getFieldLayout().getTagPose(id);
         return pose.map(Pose3d::toPose2d).orElse(null);
     }
+
+    /** @return the closest AprilTag matching the supplied criteria */
+    public static AprilTag getClosestAprilTagMatching(Pose2d currentPose,
+                                                      Predicate<AprilTag> predicate) {
+
+        AprilTag closestTag = null;
+        double closestDistance = Double.MAX_VALUE;
+
+        for (AprilTag tag : Util.getFieldLayout().getTags()) {
+            double tagDistance = Util.feetBetween(currentPose, tag.pose.toPose2d());
+            if (predicate.test(tag) && tagDistance < closestDistance) {
+                closestDistance = tagDistance;
+                closestTag = tag;
+            }
+        }
+
+        return closestTag;
+    }
+
+    static BooleanEntry isRedAlliance = null;
 
     /**
      * @return true if we are on the red alliance (if we're simulating we
@@ -149,11 +153,13 @@ public class Util {
      */
     public static boolean isRedAlliance() {
         if (RobotBase.isSimulation()) {
-            return NetworkTableInstance.getDefault()
+            if (isRedAlliance == null) {
+                isRedAlliance = NetworkTableInstance.getDefault()
                     .getTable("FMSInfo")
                     .getBooleanTopic("IsRedAlliance")
-                    .getEntry(false)
-                    .get();
+                    .getEntry(false);
+            }
+            return isRedAlliance.get();
         } else {
             return DriverStation.getAlliance().orElse(Alliance.Red) == Alliance.Red;
         }

@@ -11,17 +11,24 @@ import static frc.robot.util.Util.pref;
 
 /**
  * Configuration parameters for limelight april id targeting (all default
- * values were supplied in the manufacturer's docs)
+ * values were supplied in the <a href="https://docs.limelightvision.io/docs/docs-limelight/tutorials/tutorial-swerve-pose-estimation">manufacturer's
+ * docs</a>)
  */
 public class LimelightConfig {
 
-    /** Name of the limelight in SmartDashboard */
+    /**
+     * Name of the limelight in SmartDashboard
+     */
     public static final String limelightName = "limelight";
 
-    /** Key in SmartDashboard for classic pose estimates */
+    /**
+     * Key in SmartDashboard for classic pose estimates
+     */
     public static final String classicPoseKey = "botpose_wpiblue";
 
-    /** Key in SmartDashboard for mega tag pose estimates */
+    /**
+     * Key in SmartDashboard for mega tag pose estimates
+     */
     public static final String megaTagPoseKey = "botpose_orb_wpiblue";
 
     /**
@@ -36,15 +43,21 @@ public class LimelightConfig {
      */
     public static final Vector<N3> confidenceMegaTag2 = VecBuilder.fill(.7,.7,9999999);
 
-    /** Which algorithm to use */
+    /**
+     * Which algorithm to use
+     */
     public static final BooleanSupplier useMegaTag2 = pref("LimelightPose/MegaTag2?", true);
 
-    /** Thresholds for classic algorithm */
+    /**
+     * Thresholds for classic algorithm
+     */
     public static final DoubleSupplier classicMaxAmbiguity = pref("LimelightPose/ClassicMaxAmbiguity", 0.7);
     public static final DoubleSupplier classicMaxDistance = pref("LimelightPose/ClassicMaxDistance", 3.0);
 
-    /** Thresholds for MegaTag2 algorithm */
+    /**
+     * Thresholds for MegaTag2 algorithm
+     */
     public static final DoubleSupplier megaTagMinArea = pref("LimelightPose/MegaTagMinArea", 0.5);
-    public static final DoubleSupplier megaTagMaxYawRate = pref("LimelightPose/MegaTagMaxYawRate", 720.0);
+    public static final DoubleSupplier megaTagMaxSpinRate = pref("LimelightPose/MegaTagMaxYawRate", 720.0);
 
 }

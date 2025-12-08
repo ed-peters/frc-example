@@ -76,7 +76,7 @@ public class ElevatorSubsystem extends SubsystemBase {
     public ElevatorSubsystem(Motor motor) {
 
         this.motor = motor;
-        this.pid = new PIDController(p.getAsDouble(), 0.0, d.getAsDouble(), 0.0);
+        this.pid = new PIDController(p.getAsDouble(), 0.0, d.getAsDouble());
         this.currentCommand = "";
         this.goalHeight = Double.NaN;
         this.nextHeight = Double.NaN;

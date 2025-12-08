@@ -22,7 +22,11 @@ public class AutoSimRobot extends TimedRobot {
 
     public AutoSimRobot() {
         drive = new SwerveDriveSubsystem(new SwerveChassisSim());
-        auto = new AutonomousSubsystem(drive);
+        auto = new AutonomousSubsystem(
+                drive::getPose,
+                drive::resetPose,
+                drive::getCurrentSpeed,
+                speeds -> drive.drive("auto", speeds));
         controller = new CommandXboxController(0);
     }
 

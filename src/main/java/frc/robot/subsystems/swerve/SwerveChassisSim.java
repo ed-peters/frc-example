@@ -2,6 +2,7 @@ package frc.robot.subsystems.swerve;
 
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
@@ -32,8 +33,8 @@ public class SwerveChassisSim implements SwerveChassis {
     }
 
     @Override
-    public Rotation2d getHeading() {
-        return Rotation2d.fromRadians(currentHeading);
+    public Rotation3d getGyroRotation() {
+        return new Rotation3d(0.0, 0.0, currentHeading);
     }
 
     @Override
@@ -54,11 +55,6 @@ public class SwerveChassisSim implements SwerveChassis {
     }
 
     @Override
-    public void resetHeading(Rotation2d newHeading) {
-        currentHeading = newHeading.getRadians();
-    }
-
-    @Override
     public SwerveModulePosition[] getModulePositions() {
         SwerveModulePosition [] positions = new SwerveModulePosition[4];
         for (int i=0; i<4; i++) {
@@ -71,10 +67,6 @@ public class SwerveChassisSim implements SwerveChassis {
     public void setModuleStates(SwerveModuleState [] states) {
 
         for (int i=0; i<4; i++) {
-
-            // optimize the desired state based on the wheel's current heading
-            Rotation2d currentAngle = Rotation2d.fromRadians(angle[i]);
-            optimizeModuleState(states[i], currentAngle);
 
             // record current velocity and angle
             velocity[i] = states[i].speedMetersPerSecond;

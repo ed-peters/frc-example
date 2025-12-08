@@ -12,7 +12,7 @@ It includes:
   * [`frc.robot.subsystems.strap`](src/main/java/frc/robot/subsystems/strap)
 
 
-* **Intake** - a flywheel based subsystem, with support for closed loop based on rotation speed or linear speed, and some examples of using sensors
+* **Intake** - a flywheel based subsystem, with support for closed loop based on desiredRotation speed or linear speed, and some examples of using sensors
   * [`frc.robot.subsystems.intake`](src/main/java/frc/robot/subsystems/intake)
   * [`frc.robot.commands.intake`](src/main/java/frc/robot/commands/intake)
 

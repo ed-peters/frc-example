@@ -17,7 +17,6 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.robot.subsystems.swerve.SwerveDriveSubsystem;
 import frc.robot.util.Util;
 import org.json.simple.parser.ParseException;
 
@@ -25,14 +24,22 @@ import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import static frc.robot.subsystems.auto.AutonomousConfig.d;
 import static frc.robot.subsystems.auto.AutonomousConfig.p;
 
+/**
+ * Subsystem that manages a set of declared autonomous programs and allows
+ * selecting one to run.
+ */
 public class AutonomousSubsystem extends SubsystemBase {
 
-    final SwerveDriveSubsystem drive;
+    final Supplier<Pose2d> poseSupplier;
+    final Consumer<Pose2d> poseConsumer;
+    final Supplier<ChassisSpeeds> speedSupplier;
+    final Consumer<ChassisSpeeds> speedConsumer;
     final Supplier<String> programPicker;
     String selected;
     Command command;
@@ -42,9 +49,15 @@ public class AutonomousSubsystem extends SubsystemBase {
     // INITIALIZATION
     // ==========================================================
 
-    public AutonomousSubsystem(SwerveDriveSubsystem drive) {
+    public AutonomousSubsystem(Supplier<Pose2d> poseSupplier,
+                               Consumer<Pose2d> poseConsumer,
+                               Supplier<ChassisSpeeds> speedSupplier,
+                               Consumer<ChassisSpeeds> speedConsumer) {
 
-        this.drive = drive;
+        this.poseSupplier = poseSupplier;
+        this.poseConsumer = poseConsumer;
+        this.speedSupplier = speedSupplier;
+        this.speedConsumer = speedConsumer;
 
         // we decide which type of picker to use depending on whether
         // we're in simulation or not; either way, our picker will
@@ -59,7 +72,7 @@ public class AutonomousSubsystem extends SubsystemBase {
         // there's a lot happening under the covers here, and PathPlanner
         // might generate an error if there's a problem with config files,
         // or calculating a path, or something like that.
-
+        //
         // we don't want the entire robot to crash if there's a problem
         // with autonomous, so we wrap this whole thing with an exception
         // handler. if there is an error, we will log it and then use our
@@ -89,13 +102,17 @@ public class AutonomousSubsystem extends SubsystemBase {
         Util.log("[auto] loading robot configuration");
         RobotConfig config = RobotConfig.fromGUISettings();
 
+        // this registers all the commands we'll use when executing our
+        // selected program
+        registerNamedCommands();
+
         // this is what accepts calculated speeds from the path engine
         // and actually applies them to drive the robot around; if the
         // robot isn't moving at all, start debugging here
         BiConsumer<ChassisSpeeds,DriveFeedforwards> output = (s, f) -> {
             SmartDashboard.putNumber("PP_X", s.vxMetersPerSecond);
             SmartDashboard.putNumber("PP_Y", s.vyMetersPerSecond);
-            drive.drive("auto", s);
+            speedConsumer.accept(s);
         };
 
         // this is used to provide feedback to keep the robot on the
@@ -108,9 +125,9 @@ public class AutonomousSubsystem extends SubsystemBase {
 
         Util.log("[auto] configuring AutoBuilder");
         AutoBuilder.configure(
-                drive::getFusedPose,
-                drive::resetPose,
-                drive::getCurrentSpeed,
+                poseSupplier,
+                poseConsumer,
+                speedSupplier,
                 output,
                 controller,
                 config,
@@ -133,9 +150,9 @@ public class AutonomousSubsystem extends SubsystemBase {
 
     /**
      * Call this from {@link TimedRobot#autonomousInit()} to create the
-     * actual command. You should do all the work of loading the program
-     * and configuring PathPlanner here, so the field operator doesn't
-     * have to wait for it to happen.
+     * actual command. We do all the work of loading the program and
+     * configuring PathPlanner here, so the field operator doesn't have
+     * to wait for it to happen.
      */
     public Command generateCommand() {
 
@@ -252,6 +269,6 @@ public class AutonomousSubsystem extends SubsystemBase {
         // the alliance wall (blue is 0, red is 180)
         return Util.isRedAlliance()
                 ? new Pose2d(0.0, 0.0, Rotation2d.k180deg)
-                : Util.ZERO_POSE;
+                : Pose2d.kZero;
     }
 }

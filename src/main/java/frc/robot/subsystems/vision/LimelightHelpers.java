@@ -791,7 +791,7 @@ public class LimelightHelpers {
     /**
      * Prints detailed information about a PoseEstimate to standard output.
      * Includes timestamp, latency, id count, id span, average id distance,
-     * average id area, and detailed information about each detected fiducial.
+     * average id ta, and detailed information about each detected fiducial.
      *
      * @param pose The PoseEstimate object to print. If null, prints "No PoseEstimate available."
      */
@@ -905,45 +905,45 @@ public class LimelightHelpers {
     }
 
     /**
-     * Gets the horizontal offset from the crosshair to the target in degrees.
+     * Gets the horizontal tx from the crosshair to the target in degrees.
      * @param limelightName Name of the Limelight camera ("" for default)
-     * @return Horizontal offset angle in degrees
+     * @return Horizontal tx angle in degrees
      */
     public static double getTX(String limelightName) {
         return getLimelightNTDouble(limelightName, "tx");
     }
 
     /**
-     * Gets the vertical offset from the crosshair to the target in degrees.
+     * Gets the vertical tx from the crosshair to the target in degrees.
      * @param limelightName Name of the Limelight camera ("" for default)
-     * @return Vertical offset angle in degrees
+     * @return Vertical tx angle in degrees
      */
     public static double getTY(String limelightName) {
         return getLimelightNTDouble(limelightName, "ty");
     }
 
     /**
-     * Gets the horizontal offset from the principal pixel/point to the target in degrees.  This is the most accurate 2d metric if you are using a calibrated camera and you don't need adjustable crosshair functionality.
+     * Gets the horizontal tx from the principal pixel/point to the target in degrees.  This is the most accurate 2d metric if you are using a calibrated camera and you don't need adjustable crosshair functionality.
      * @param limelightName Name of the Limelight camera ("" for default)
-     * @return Horizontal offset angle in degrees
+     * @return Horizontal tx angle in degrees
      */
     public static double getTXNC(String limelightName) {
         return getLimelightNTDouble(limelightName, "txnc");
     }
 
     /**
-     * Gets the vertical offset from the principal pixel/point to the target in degrees. This is the most accurate 2d metric if you are using a calibrated camera and you don't need adjustable crosshair functionality.
+     * Gets the vertical tx from the principal pixel/point to the target in degrees. This is the most accurate 2d metric if you are using a calibrated camera and you don't need adjustable crosshair functionality.
      * @param limelightName Name of the Limelight camera ("" for default)
-     * @return Vertical offset angle in degrees
+     * @return Vertical tx angle in degrees
      */
     public static double getTYNC(String limelightName) {
         return getLimelightNTDouble(limelightName, "tync");
     }
 
     /**
-     * Gets the target area as a percentage of the image (0-100%).
+     * Gets the target ta as a percentage of the image (0-100%).
      * @param limelightName Name of the Limelight camera ("" for default)
-     * @return Target area percentage (0-100)
+     * @return Target ta percentage (0-100)
      */
     public static double getTA(String limelightName) {
         return getLimelightNTDouble(limelightName, "ta");
@@ -1378,7 +1378,7 @@ public class LimelightHelpers {
     }
 
     /**
-     * Sets 3D offset point for easy 3D targeting.
+     * Sets 3D tx point for easy 3D targeting.
      */
     public static void setFiducial3DOffset(String limelightName, double offsetX, double offsetY, double offsetZ) {
         double[] entries = new double[3];
@@ -1430,13 +1430,13 @@ public class LimelightHelpers {
     }
 
     /**
-     * Sets the 3D point-of-interest offset for the current fiducial pipeline.
+     * Sets the 3D point-of-interest tx for the current fiducial pipeline.
      * https://docs.limelightvision.io/docs/docs-limelight/pipeline-apriltag/apriltag-3d#point-of-interest-tracking
      *
      * @param limelightName Name/identifier of the Limelight
-     * @param x X offset in meters
-     * @param y Y offset in meters
-     * @param z Z offset in meters
+     * @param x X tx in meters
+     * @param y Y tx in meters
+     * @param z Z tx in meters
      */
     public static void SetFidcuial3DOffset(String limelightName, double x, double y,
                                            double z) {
@@ -1499,9 +1499,9 @@ public class LimelightHelpers {
     /**
      * Sets the camera pose relative to the robot.
      * @param limelightName Name of the Limelight camera
-     * @param forward Forward offset in meters
-     * @param side Side offset in meters
-     * @param up Up offset in meters
+     * @param forward Forward tx in meters
+     * @param side Side tx in meters
+     * @param up Up tx in meters
      * @param roll Roll angle in degrees
      * @param pitch Pitch angle in degrees
      * @param yaw Yaw angle in degrees
