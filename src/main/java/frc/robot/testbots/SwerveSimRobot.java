@@ -19,6 +19,8 @@ import frc.robot.commands.swerve.SwerveTeleopCommand;
 import frc.robot.subsystems.swerve.SwerveChassisSim;
 import frc.robot.subsystems.swerve.SwerveDriveSubsystem;
 
+import java.util.function.Function;
+
 /**
  * Implementation of {@link TimedRobot} that shows the use of the simulated
  * swerve chassis and the use of swerve commands
@@ -100,13 +102,14 @@ public class SwerveSimRobot extends TimedRobot {
             case SOUTH -> Rotation2d.kCW_90deg;
         };
 
-        // use a deferred proxy because we dynamically calculate the target
-        // pose when the command is run
-        return drive.defer(() -> {
-            Pose2d oldPose = drive.getPose();
-            Pose2d newPose = new Pose2d(oldPose.getTranslation(), heading);
-            return moveToFixedPose(newPose);
-        });
+        Function<Pose2d,Pose2d> poseFunction = currentPose ->
+                new Pose2d(currentPose.getTranslation(), heading);
+
+        return SwerveAutoPoseCommand.relative(
+                drive,
+                drive::getPose,
+                speeds -> drive.drive("face-"+wall, speeds),
+                poseFunction);
     }
 
     /**
@@ -115,17 +118,14 @@ public class SwerveSimRobot extends TimedRobot {
      */
     private Command rotateSlightlyCommand(double degrees) {
 
-        Rotation2d rotation = Rotation2d.fromDegrees(degrees);
+        Function<Pose2d,Pose2d> poseFunction = currentPose ->
+                currentPose.rotateBy(Rotation2d.fromDegrees(degrees));
 
-        // use a deferred proxy because we dynamically calculate the target
-        // pose when the command is run
-        return drive.defer(() -> {
-            Pose2d oldPose = drive.getPose();
-            Pose2d newPose = new Pose2d(
-                    oldPose.getTranslation(),
-                    oldPose.getRotation().plus(rotation));
-            return moveToFixedPose(newPose);
-        });
+        return SwerveAutoPoseCommand.relative(
+                drive,
+                drive::getPose,
+                speeds -> drive.drive("auto-rotate", speeds),
+                poseFunction);
     }
 
     /**
@@ -197,11 +197,14 @@ public class SwerveSimRobot extends TimedRobot {
                 new Translation2d(1.0, 0.0),
                 Rotation2d.k180deg);
 
-        return drive.defer(() -> {
-            Pose2d oldPose = drive.getPose();
-            Pose2d newPose = oldPose.transformBy(transform);
-            return moveToFixedPose(newPose);
-        });
+        Function<Pose2d,Pose2d> poseFunction = currentPose ->
+                currentPose.transformBy(transform);
+
+        return SwerveAutoPoseCommand.relative(
+                drive,
+                drive::getPose,
+                speeds -> drive.drive("auto-rotate", speeds),
+                poseFunction);
     }
 
     @Override

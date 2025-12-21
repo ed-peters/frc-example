@@ -6,13 +6,14 @@ import edu.wpi.first.wpilibj.I2C;
 
 /**
  * Subsystem to control communication with a Rev DigitBoard. Based on sample
- * code found {@link <a href="https://github.com/vampjaz/REVDigitBoard/blob/master/REVDigitBoard.java">here</a>}
+ * code found <a href="https://github.com/vampjaz/REVDigitBoard/blob/master/REVDigitBoard.java">here
+ * on github</a>
  */
 public class DigitBoard {
 
-    public static final byte [] OSC = { (byte) 0x21 };
-    public static final byte [] BLINK = { (byte) 0x81 };
-    public static final byte [] BRIGHT = { (byte) 0xEf };
+    private static final byte [] OSC = { (byte) 0x21 };
+    private static final byte [] BLINK = { (byte) 0x81 };
+    private static final byte [] BRIGHT = { (byte) 0xEf };
 
     // Adapted partially from Team 1493, the rest was done using regular expressions!
     private static final byte[][] CHARS =
@@ -123,6 +124,9 @@ public class DigitBoard {
     private boolean aWasPressed;
     private boolean bWasPressed;
 
+    /**
+     * Creates a {@link DigitBoard}
+     */
     public DigitBoard() {
         this.buffer = new byte[10];
         this.i2c = new I2C(I2C.Port.kMXP, 0x70);
@@ -185,9 +189,11 @@ public class DigitBoard {
     /**
      * Writes the first 4 characters of the supplied string to the display
      * (the string will be right-padded with spaces if it's not long enough)
+     *
+     * @param text the text to display
      */
-    public void display(String output) {
-        writeToBuffer(output+"      ");
+    public void display(String text) {
+        writeToBuffer(text+"      ");
         i2c.writeBulk(OSC);
         i2c.writeBulk(BRIGHT);
         i2c.writeBulk(BLINK);
@@ -209,10 +215,13 @@ public class DigitBoard {
 
             while(/*letter < 32 ||*/ letter == '.')
             {
-                if(letter == '.')
+                // this code was copied verbatim and included this error
+                // noinspection ConstantConditions
+                if (letter == '.')
                 {
-                    if(i != 0)
-                        buffer[(4-i)*2+3] |= (byte)0b01000000;
+                    if (i != 0) {
+                        buffer[(4 - i) * 2 + 3] |= (byte) 0b01000000;
+                    }
                 }
 
                 offset++;

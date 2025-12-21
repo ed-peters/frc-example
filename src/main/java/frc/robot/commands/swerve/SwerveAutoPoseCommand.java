@@ -9,12 +9,15 @@ import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import frc.robot.util.MotionProfile;
 import frc.robot.util.MotionProfile.State;
 import frc.robot.util.Util;
 
+import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static frc.robot.commands.swerve.SwerveAutoConfig.rotateD;
@@ -350,11 +353,35 @@ public class SwerveAutoPoseCommand extends Command {
         SmartDashboard.putBoolean("SwerveAutoPoseCommand/Running?", false);
     }
 
+    // ===============================================================
+    // HELPERS
+    // ===============================================================
+
     record DesiredRotation(Rotation2d desiredSpeed, Rotation2d desiredHeading) {
 
     }
 
     record DesiredTranslation(Translation2d desiredSpeed, Translation2d desiredPosition) {
 
+    }
+
+    /**
+     * Creates a version of this command that will calculate its final pose
+     * dynamically based on the pose of the robot when the command is first
+     * scheduled
+     */
+    public static Command relative(Subsystem subsystem,
+                                   Supplier<Pose2d> poseSupplier,
+                                   Consumer<ChassisSpeeds> speedConsumer,
+                                   Function<Pose2d,Pose2d> poseFunction) {
+        return Commands.defer(
+                () -> {
+                    Pose2d finalPose = poseFunction.apply(poseSupplier.get());
+                    return new SwerveAutoPoseCommand(subsystem,
+                            poseSupplier,
+                            speedConsumer,
+                            finalPose);
+                },
+                Set.of(subsystem));
     }
 }

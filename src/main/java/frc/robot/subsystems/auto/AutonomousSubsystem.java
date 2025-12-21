@@ -11,12 +11,12 @@ import com.pathplanner.lib.util.DriveFeedforwards;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
-import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.util.AutoProgramPicker;
 import frc.robot.util.Util;
 import org.json.simple.parser.ParseException;
 
@@ -40,7 +40,7 @@ public class AutonomousSubsystem extends SubsystemBase {
     final Consumer<Pose2d> poseConsumer;
     final Supplier<ChassisSpeeds> speedSupplier;
     final Consumer<ChassisSpeeds> speedConsumer;
-    final Supplier<String> programPicker;
+    final AutoProgramPicker picker;
     String selected;
     Command command;
     boolean error;
@@ -58,16 +58,10 @@ public class AutonomousSubsystem extends SubsystemBase {
         this.poseConsumer = poseConsumer;
         this.speedSupplier = speedSupplier;
         this.speedConsumer = speedConsumer;
-
-        // we decide which type of picker to use depending on whether
-        // we're in simulation or not; either way, our picker will
-        // return the long name of the currently-selected program
-
-        this.programPicker = RobotBase.isSimulation()
-                ? new DashboardPicker("AutonomousProgram", getProgramNames())
-                : new DigitBoardPicker(getProgramNames());
-
-        this.selected = programPicker.get();
+        this.picker = new AutoProgramPicker(
+                "Auto Program",
+                getProgramNames());
+        this.selected = picker.get();
 
         // there's a lot happening under the covers here, and PathPlanner
         // might generate an error if there's a problem with config files,
@@ -145,7 +139,7 @@ public class AutonomousSubsystem extends SubsystemBase {
 
     @Override
     public void periodic() {
-        selected = programPicker.get();
+        selected = picker.get();
     }
 
     /**
