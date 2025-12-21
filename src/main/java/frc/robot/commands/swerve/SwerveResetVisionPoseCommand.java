@@ -2,8 +2,8 @@ package frc.robot.commands.swerve;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.wpilibj2.command.Command;
-import frc.robot.subsystems.swerve.SwervePoseCalculator;
-import frc.robot.subsystems.swerve.SwervePoseCalculator.PoseType;
+import frc.robot.util.swerve.SwervePoseCalculator;
+import frc.robot.util.swerve.SwervePoseCalculator.PoseType;
 
 import java.util.function.Consumer;
 
@@ -34,7 +34,7 @@ public class SwerveResetVisionPoseCommand extends Command{
 
     @Override
     public void execute() {
-        Pose2d pose = poseCalculator.getPoseEstimate(PoseType.VISION);
+        Pose2d pose = poseCalculator.getLatestPoseEstimate(PoseType.VISION);
         if (pose != null) {
             log("[swerve] resetting pose to vision pose %s", pose);
             poseConsumer.accept(pose);

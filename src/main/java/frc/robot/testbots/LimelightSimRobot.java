@@ -1,7 +1,3 @@
-// Copyright (c) FIRST and other WPILib contributors.
-// Open Source Software; you can modify and/or share it under the terms of
-// the WPILib BSD license file in the root directory of this project.
-
 package frc.robot.testbots;
 
 import edu.wpi.first.apriltag.AprilTag;
@@ -14,10 +10,10 @@ import frc.robot.commands.swerve.SwerveTeleopCommand;
 import frc.robot.commands.vision.TargetingCommandBuilder;
 import frc.robot.subsystems.swerve.SwerveChassisSim;
 import frc.robot.subsystems.swerve.SwerveDriveSubsystem;
-import frc.robot.subsystems.swerve.SwervePoseCalculator.PoseType;
 import frc.robot.subsystems.vision.LimelightSim;
 import frc.robot.subsystems.vision.LimelightSubsystem;
 import frc.robot.util.Util;
+import frc.robot.util.swerve.SwervePoseCalculator.PoseType;
 
 import java.util.Set;
 import java.util.function.Predicate;
@@ -50,7 +46,7 @@ public class LimelightSimRobot extends TimedRobot {
         // this tells the limelight simulator to use the odometry-only
         // pose estimate as the "base" pose for its fake tracking data
         limelightSim = new LimelightSim(
-                () -> drive.getPoseCalculator().getPoseEstimate(PoseType.ODOMETRY)
+                () -> drive.getPoseCalculator().getLatestPoseEstimate(PoseType.ODOMETRY)
         );
 
         // this will build some of our targeting commands for us

@@ -59,6 +59,6 @@ public class SwerveConfig {
     /**
      * Enable/disable using fused pose estimates
      */
-    public static BooleanSupplier useVisionHeading = pref("SwerveDriveSubsystem/UseGyroHeading?", true);
+    public static BooleanSupplier overrideFusedHeading = pref("SwerveDriveSubsystem/OverrideFusedHeading?", true);
 
 }

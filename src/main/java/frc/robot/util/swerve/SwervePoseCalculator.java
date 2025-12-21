@@ -1,0 +1,188 @@
+package frc.robot.util.swerve;
+
+import edu.wpi.first.math.Matrix;
+import edu.wpi.first.math.estimator.SwerveDrivePoseEstimator;
+import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
+import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
+import edu.wpi.first.math.kinematics.SwerveModulePosition;
+import edu.wpi.first.math.numbers.N1;
+import edu.wpi.first.math.numbers.N3;
+import frc.robot.util.Util;
+
+import java.util.Objects;
+import java.util.function.Supplier;
+
+/**
+ * <p>Implements the logic for "fusing" both odometry and vision-based pose
+ * estimation. Also publishes poses to the dashboard, so you can visualize
+ * them using AdvantageScope, and allows you to reset the current pose. See
+ * the <a href="https://docs.wpilib.org/en/stable/docs/software/advanced-controls/state-space/state-space-pose-estimators.html">WPILib
+ * docs</a> for more background on fused estimates.</p>
+ */
+public class SwervePoseCalculator {
+
+    /**
+     * Represents the different types of pose being managed
+     */
+    public enum PoseType {
+
+        /** Odometry-only pose */
+        ODOMETRY,
+
+        /** Vision-only pose */
+        VISION,
+
+        /** Fused odometry + vision pose */
+        FUSED
+    }
+
+    final Supplier<Rotation2d> headingGetter;
+    final Supplier<SwerveModulePosition[]> modulePositionGetter;
+    final SwerveDriveOdometry odometry;
+    final SwerveDrivePoseEstimator estimator;
+    Pose2d latestVisionPose;
+    Pose2d latestOdometryPose;
+    Pose2d latestFusedPose;
+    double latestVisionTimestamp;
+
+    /**
+     * Creates a {@link SwervePoseCalculator}
+     * @param kinematics the chassis kinematics (required)
+     * @param headingGetter a getter for the robot heading (required)
+     * @param modulePositionGetter a getter for module positions (required)
+     * @param initialPose the initial pose of the robot
+     * @throws IllegalArgumentException if required parameters are null
+     */
+    public SwervePoseCalculator(SwerveDriveKinematics kinematics,
+                                Supplier<Rotation2d> headingGetter,
+                                Supplier<SwerveModulePosition[]> modulePositionGetter,
+                                Pose2d initialPose) {
+
+        Objects.requireNonNull(kinematics);
+        Objects.requireNonNull(headingGetter);
+        Objects.requireNonNull(modulePositionGetter);
+
+        // if there is no initial pose, we'll assume it's zero
+        if (initialPose == null) {
+            initialPose = Pose2d.kZero;
+        }
+
+        this.headingGetter = headingGetter;
+        this.modulePositionGetter = modulePositionGetter;
+        this.odometry = new SwerveDriveOdometry(
+                kinematics,
+                headingGetter.get(),
+                modulePositionGetter.get(),
+                initialPose);
+        this.estimator = new SwerveDrivePoseEstimator(
+                kinematics,
+                headingGetter.get(),
+                modulePositionGetter.get(),
+                initialPose);
+        this.latestVisionPose = Util.NAN_POSE;
+        this.latestOdometryPose = initialPose;
+        this.latestFusedPose = initialPose;
+        this.latestVisionTimestamp = Double.NaN;
+    }
+
+    /**
+     * Returns the most recently-computed pose estimate of the specified
+     * type (as calculated by {@link #updateLatestPoseEstimates(boolean)}
+     * @param type a pose type
+     * @return the latest pose estimate of the specified type (this will never
+     * be null, but may have NaNs if it's the vision pose and no vision
+     * estimates have been provided)
+     */
+    public Pose2d getLatestPoseEstimate(PoseType type) {
+        return switch (type) {
+            case ODOMETRY -> latestOdometryPose;
+            case VISION -> latestVisionPose;
+            case FUSED -> latestFusedPose;
+        };
+    }
+
+    /**
+     * Add a vision pose to the estimator. The parameters indicate how much
+     * to "trust" the vision estimate, and approximately how old it is (in
+     * seconds since the robot started up). See these methods for more
+     * information about the parameters:
+     * <ul>
+     *     <li>{@link SwerveDrivePoseEstimator#setVisionMeasurementStdDevs(Matrix)}</li>
+     *     <li>{@link SwerveDrivePoseEstimator#addVisionMeasurement(Pose2d,double)}</li>
+     * </ul>
+     * @param pose the pose from the vision system
+     * @param timestamp the timestamp of the vision measurement in seconds
+     * @param stdDevs standard deviations of the vision measurements
+     */
+    public void addVisionEstimate(Pose2d pose, double timestamp, Matrix<N3,N1> stdDevs) {
+        if (pose == null) {
+            latestVisionPose = Util.NAN_POSE;
+            latestVisionTimestamp = Double.NaN;
+        } else {
+            estimator.setVisionMeasurementStdDevs(stdDevs);
+            estimator.addVisionMeasurement(pose, timestamp);
+            latestVisionPose = pose;
+            latestVisionTimestamp = timestamp;
+        }
+    }
+
+    /**
+     * Reset the pose of the robot to the specified value
+     * @param newPose the new pose of the robot
+     */
+    public void resetPose(Pose2d newPose) {
+
+        odometry.resetPosition(
+                headingGetter.get(),
+                modulePositionGetter.get(),
+                newPose);
+        latestOdometryPose = newPose;
+
+        estimator.resetPosition(
+                headingGetter.get(),
+                modulePositionGetter.get(),
+                newPose);
+        latestFusedPose = newPose;
+    }
+
+    /**
+     * Recalculates and publishes the latest pose estimates. You should call
+     * this from a <code>periodic</code> method so you have access to the most
+     * recent estimates.
+     * @param overrideFusedHeading true if we should replace the heading
+     *                             component of the fused estimate with the
+     *                             heading from pure odometry (we've found that
+     *                             Limelight heading estimates can be jittery,
+     *                             so we usually use this)
+     */
+    public void updateLatestPoseEstimates(boolean overrideFusedHeading) {
+
+        Rotation2d latestHeading = headingGetter.get();
+        SwerveModulePosition [] latestPositions = modulePositionGetter.get();
+
+        // update the odometry and calculate its pose estimate
+        odometry.update(latestHeading, latestPositions);
+        latestOdometryPose = odometry.getPoseMeters();
+
+        // update the fused estimator and calculate its pose estimate
+        estimator.update(latestHeading, latestPositions);
+        latestFusedPose = estimator.getEstimatedPosition();
+
+        // it may not be a good idea to trust the vision-based heading
+        // estimate (the gyro is usually pretty accurate), so this may
+        // wind up "overriding" it with the gyro heading from odometry
+        if (overrideFusedHeading) {
+            latestFusedPose = new Pose2d(
+                    latestFusedPose.getX(),
+                    latestFusedPose.getY(),
+                    latestOdometryPose.getRotation());
+        }
+
+        // publish them as structs so we can see them in advantage scope
+        Util.publishPose("FusedPose", latestFusedPose);
+        Util.publishPose("OdometryPose", latestOdometryPose);
+        Util.publishPose("VisionPose", latestVisionPose);
+    }
+}

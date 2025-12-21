@@ -1,7 +1,3 @@
-// Copyright (c) FIRST and other WPILib contributors.
-// Open Source Software; you can modify and/or share it under the terms of
-// the WPILib BSD license file in the root directory of this project.
-
 package frc.robot.testbots;
 
 import edu.wpi.first.math.geometry.Pose2d;
@@ -18,8 +14,6 @@ import frc.robot.commands.swerve.SwerveAutoPoseCommand;
 import frc.robot.commands.swerve.SwerveTeleopCommand;
 import frc.robot.subsystems.swerve.SwerveChassisSim;
 import frc.robot.subsystems.swerve.SwerveDriveSubsystem;
-
-import java.util.function.Function;
 
 /**
  * Implementation of {@link TimedRobot} that shows the use of the simulated
@@ -51,10 +45,21 @@ public class SwerveSimRobot extends TimedRobot {
         controller.povRight().onTrue(faceTheWallCommand(ArenaWall.WEST));
 
         // a will rotate a little bit left (spam it to turn around fully)
-        controller.a().onTrue(rotateSlightlyCommand(15.0));
+        controller.a().onTrue(SwerveAutoPoseCommand.rotateBy(
+                        drive,
+                        drive::getPose,
+                        speeds -> drive.drive("auto", speeds),
+                        Rotation2d.fromDegrees(15.0)));
 
-        // b will scoot forward and flip around
-        controller.b().onTrue(scootAndFlipAround());
+        // b will move the robot one meter straight ahead, and turn it around
+        // to face the position is was just occupying
+        controller.b().onTrue(SwerveAutoPoseCommand.transform(
+                        drive,
+                        drive::getPose,
+                        speeds -> drive.drive("auto", speeds),
+                        new Transform2d(
+                                new Translation2d(1.0, 0.0),
+                                Rotation2d.k180deg)));
 
         // x will rotate us slowly around the center of the blue reef
         controller.x().onTrue(rotateAroundReefCommand(90.0));
@@ -77,11 +82,10 @@ public class SwerveSimRobot extends TimedRobot {
     }
 
     /**
-     * This is how you use the {@link SwerveAutoPoseCommand} with the simulated
-     * swerve drive to move to a fixed pose on the field
+     * Creates a command to move to a fixed pose
      */
     private Command moveToFixedPose(Pose2d pose) {
-        return new SwerveAutoPoseCommand(
+        return SwerveAutoPoseCommand.absolute(
                 drive,
                 drive::getPose,
                 speeds -> drive.drive("auto", speeds),
@@ -102,30 +106,11 @@ public class SwerveSimRobot extends TimedRobot {
             case SOUTH -> Rotation2d.kCW_90deg;
         };
 
-        Function<Pose2d,Pose2d> poseFunction = currentPose ->
-                new Pose2d(currentPose.getTranslation(), heading);
-
-        return SwerveAutoPoseCommand.relative(
+        return SwerveAutoPoseCommand.rotateTo(
                 drive,
                 drive::getPose,
                 speeds -> drive.drive("face-"+wall, speeds),
-                poseFunction);
-    }
-
-    /**
-     * This is how you wrap the above function to implement rotating a small
-     * amount from the current heading
-     */
-    private Command rotateSlightlyCommand(double degrees) {
-
-        Function<Pose2d,Pose2d> poseFunction = currentPose ->
-                currentPose.rotateBy(Rotation2d.fromDegrees(degrees));
-
-        return SwerveAutoPoseCommand.relative(
-                drive,
-                drive::getPose,
-                speeds -> drive.drive("auto-rotate", speeds),
-                poseFunction);
+                heading);
     }
 
     /**
@@ -183,28 +168,6 @@ public class SwerveSimRobot extends TimedRobot {
 
             return faceReef.andThen(rotateAroundReef);
         });
-    }
-
-    /**
-     * This is how you wrap the above function to implement a more complex
-     * position relative to the current robot pose
-     */
-    private Command scootAndFlipAround() {
-
-        // this transformation will move the robot one meter straight ahead,
-        // and turn it around to face the position is was just occupying
-        Transform2d transform = new Transform2d(
-                new Translation2d(1.0, 0.0),
-                Rotation2d.k180deg);
-
-        Function<Pose2d,Pose2d> poseFunction = currentPose ->
-                currentPose.transformBy(transform);
-
-        return SwerveAutoPoseCommand.relative(
-                drive,
-                drive::getPose,
-                speeds -> drive.drive("auto-rotate", speeds),
-                poseFunction);
     }
 
     @Override

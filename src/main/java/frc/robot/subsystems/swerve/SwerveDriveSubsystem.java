@@ -12,24 +12,24 @@ import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.util.Util;
+import frc.robot.util.swerve.SwerveKinematicsCalculator;
+import frc.robot.util.swerve.SwervePoseCalculator;
+import frc.robot.util.swerve.SwervePoseCalculator.PoseType;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
+import static frc.robot.subsystems.swerve.SwerveConfig.cosineCompensation;
 import static frc.robot.subsystems.swerve.SwerveConfig.kinematics;
+import static frc.robot.subsystems.swerve.SwerveConfig.maximumWheelSpeed;
+import static frc.robot.subsystems.swerve.SwerveConfig.overrideFusedHeading;
+import static frc.robot.subsystems.swerve.SwerveConfig.useFusedPose;
 
 /**
  * Interface for a swerve drive
  */
 public class SwerveDriveSubsystem extends SubsystemBase {
-
-    public enum Direction {
-        NORTH,
-        SOUTH,
-        EAST,
-        WEST
-    }
 
     final SwerveChassis chassis;
     final SwervePoseCalculator poseCalculator;
@@ -43,8 +43,16 @@ public class SwerveDriveSubsystem extends SubsystemBase {
     public SwerveDriveSubsystem(SwerveChassis chassis) {
 
         this.chassis = chassis;
-        this.poseCalculator = new SwervePoseCalculator(chassis, Pose2d.kZero);
-        this.kinematicsCalculator = new SwerveKinematicsCalculator(chassis);
+        this.poseCalculator = new SwervePoseCalculator(
+                kinematics,
+                chassis::getGyroHeading,
+                chassis::getModulePositions,
+                Pose2d.kZero);
+        this.kinematicsCalculator = new SwerveKinematicsCalculator(
+                kinematics,
+                chassis::getModulePositions,
+                maximumWheelSpeed,
+                cosineCompensation);
         this.poseResetListeners = new ArrayList<>();
         this.latestSpeeds = Util.NAN_SPEED;
         this.latestGyroHeading = chassis.getGyroHeading();
@@ -150,8 +158,10 @@ public class SwerveDriveSubsystem extends SubsystemBase {
      */
     @Override
     public void periodic() {
-        poseCalculator.calculateLatestPoses();
+        poseCalculator.updateLatestPoseEstimates(overrideFusedHeading.getAsBoolean());
         latestGyroHeading = chassis.getGyroHeading();
-        latestPoseEstimate = poseCalculator.getPoseEstimate();
+        latestPoseEstimate = poseCalculator.getLatestPoseEstimate(useFusedPose.getAsBoolean()
+                ? PoseType.FUSED
+                : PoseType.ODOMETRY);
     }
 }

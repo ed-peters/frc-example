@@ -16,7 +16,6 @@ import frc.robot.util.Util;
 
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static frc.robot.commands.vision.LimelightTargetingConfig.tagStartingOffset;
@@ -78,10 +77,12 @@ public class TargetingCommandBuilder {
                     .onlyWhile(tagInView(tag));
         }
 
-        // otherwise, we will finish by driving to the offset position
-        Command driveToOffset = relativePoseCommand(currentPose -> new Pose2d(
-                currentPose.getTranslation().plus(offset),
-                currentPose.getRotation()));
+        // otherwise, we will finish by translating to the offset position
+        Command driveToOffset = SwerveAutoPoseCommand.translate(
+                driveSubsystem,
+                poseSupplier,
+                speedConsumer,
+                offset);
         return print
                 .andThen(rotate)
                 .andThen(servo)
@@ -111,9 +112,11 @@ public class TargetingCommandBuilder {
         }
 
         // otherwise, we will finish by driving to the offset position
-        Command driveToOffset = relativePoseCommand(currentPose -> new Pose2d(
-                currentPose.getTranslation().plus(offset),
-                currentPose.getRotation()));
+        Command driveToOffset = SwerveAutoPoseCommand.translate(
+                driveSubsystem,
+                poseSupplier,
+                speedConsumer,
+                offset);
         return print
                 .andThen(driveToStart)
                 .andThen(servo)
@@ -151,30 +154,12 @@ public class TargetingCommandBuilder {
         Pose2d targetPose = tag.pose.toPose2d().transformBy(new Transform2d(
                 translation,
                 Rotation2d.k180deg));
-        return absolutePoseCommand(targetPose);
-    }
 
-    /**
-     * @return a command to drive to an absolute position on the field
-     */
-    private Command absolutePoseCommand(Pose2d pose) {
-        return new SwerveAutoPoseCommand(
+        return SwerveAutoPoseCommand.absolute(
                 driveSubsystem,
                 poseSupplier,
                 speedConsumer,
-                pose);
-    }
-
-    /**
-     * @return a command that will drive to a new pose which is based on
-     * transforming the current pose of the robot when the command starts
-     */
-    private Command relativePoseCommand(Function<Pose2d,Pose2d> poseFunction) {
-        return driveSubsystem.defer(() -> {
-            Pose2d oldPose = poseSupplier.get();
-            Pose2d newPose = poseFunction.apply(oldPose);
-            return absolutePoseCommand(newPose);
-        });
+                targetPose);
     }
 
     /**
