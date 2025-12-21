@@ -1,7 +1,6 @@
 package frc.robot.subsystems.elevator;
 
 import edu.wpi.first.math.MathUtil;
-import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -11,6 +10,7 @@ import frc.robot.commands.elevator.ElevatorTrapezoidCommand;
 import frc.robot.commands.elevator.ElevatorTuningCommand;
 import frc.robot.util.Motor;
 import frc.robot.util.Util;
+import frc.robot.util.motion.PDController;
 
 import java.util.function.DoubleSupplier;
 
@@ -52,7 +52,7 @@ import static frc.robot.subsystems.elevator.ElevatorConfig.v;
 public class ElevatorSubsystem extends SubsystemBase {
 
     final Motor motor;
-    final PIDController pid;
+    final PDController pid;
     String currentCommand;
 
     // we'll keep these updated during periodic mode
@@ -76,7 +76,7 @@ public class ElevatorSubsystem extends SubsystemBase {
     public ElevatorSubsystem(Motor motor) {
 
         this.motor = motor;
-        this.pid = new PIDController(p.getAsDouble(), 0.0, d.getAsDouble());
+        this.pid = new PDController(p, d, tolerance, maxFeedback);
         this.currentCommand = "";
         this.goalHeight = Double.NaN;
         this.nextHeight = Double.NaN;
@@ -174,7 +174,7 @@ public class ElevatorSubsystem extends SubsystemBase {
      * trapezoid) should call this when they initialize
      */
     public void resetPid() {
-        Util.resetPid(pid, p, d, tolerance);
+        pid.reset();
     }
 
     /**
@@ -196,9 +196,7 @@ public class ElevatorSubsystem extends SubsystemBase {
 
         // calculate feedforward and feedback and sum them
         lastFeedforward = g.getAsDouble() + v.getAsDouble() * nextVelocity;
-        lastFeedback = Util.applyClamp(
-                pid.calculate(getCurrentHeight(), nextHeight),
-                maxFeedback);
+        lastFeedback = pid.calculate(getCurrentHeight(), nextHeight);
         lastVolts = Util.clampVolts(lastFeedforward + lastFeedback);
 
         motor.applyVolts(lastVolts);

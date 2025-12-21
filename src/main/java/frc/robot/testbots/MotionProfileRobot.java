@@ -4,15 +4,15 @@ import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import frc.robot.util.MotionProfile;
-import frc.robot.util.MotionProfile.State;
+import frc.robot.util.motion.SCurveProfile;
+import frc.robot.util.motion.SCurveProfile.State;
 
 public class MotionProfileRobot extends TimedRobot {
 
     static final State NO_STATE = new State(0.0, 0.0, 0.0);
 
     XboxController controller;
-    MotionProfile profile;
+    SCurveProfile profile;
     double maxPosition;
     double maxVelocity;
     double maxAcceleration;
@@ -23,7 +23,10 @@ public class MotionProfileRobot extends TimedRobot {
     public MotionProfileRobot() {
 
         controller = new XboxController(0);
-        profile = new MotionProfile();
+        profile = new SCurveProfile(
+                () -> maxVelocity,
+                () -> maxAcceleration,
+                () -> rampTime);
         maxPosition = 50.0;
         maxVelocity = 10.0;
         maxAcceleration = 5.0;
@@ -59,8 +62,7 @@ public class MotionProfileRobot extends TimedRobot {
                 timer.stop();
                 state = NO_STATE;
             } else {
-                profile.resetConstraints(maxVelocity, maxAcceleration, rampTime);
-                profile.resetMotion(0.0, maxPosition);
+                profile.reset(0.0, 0.0, maxPosition);
                 timer.restart();
             }
         }
@@ -69,9 +71,4 @@ public class MotionProfileRobot extends TimedRobot {
             state = profile.sample(timer.get());
         }
     }
-
-
-
-
-
 }

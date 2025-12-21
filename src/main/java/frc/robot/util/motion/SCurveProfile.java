@@ -116,10 +116,23 @@ public class SCurveProfile {
      * @throws NullPointerException if required parameters are null
      */
     public SCurveProfile(Constraints constraints) {
-        Objects.requireNonNull(constraints);
-        this.maxVelocitySupplier = constraints.maxVelocity();
-        this.maxAccelerationSupplier = constraints.maxAcceleration();
-        this.rampTimeSupplier = constraints.rampTime();
+        this(constraints.maxVelocity, constraints.maxAcceleration, constraints.rampTime);
+    }
+
+    /**
+     * Creates a new {@link SCurveProfile}
+     * @param maxVelocity supplier for max velocity in units per second (required)
+     * @param maxAcceleration supplier for max acceleration in units per second squared (required)
+     * @param rampTime supplier for ramp time in seconds (required)
+     * @throws NullPointerException if required parameters are null
+     */
+    public SCurveProfile(DoubleSupplier maxVelocity, DoubleSupplier maxAcceleration, DoubleSupplier rampTime) {
+        Objects.requireNonNull(maxVelocity);
+        Objects.requireNonNull(maxAcceleration);
+        Objects.requireNonNull(rampTime);
+        this.maxVelocitySupplier = maxVelocity;
+        this.maxAccelerationSupplier = maxAcceleration;
+        this.rampTimeSupplier = rampTime;
     }
 
     // =============================================================

@@ -1,17 +1,17 @@
 package frc.robot.commands.elevator;
 
-import edu.wpi.first.math.trajectory.TrapezoidProfile;
-import edu.wpi.first.math.trajectory.TrapezoidProfile.Constraints;
-import edu.wpi.first.math.trajectory.TrapezoidProfile.State;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.subsystems.elevator.ElevatorSubsystem;
 import frc.robot.util.Util;
+import frc.robot.util.motion.SCurveProfile;
+import frc.robot.util.motion.SCurveProfile.State;
 
 import java.util.function.DoubleSupplier;
 
 import static frc.robot.subsystems.elevator.ElevatorConfig.maxAcceleration;
 import static frc.robot.subsystems.elevator.ElevatorConfig.maxVelocity;
+import static frc.robot.subsystems.elevator.ElevatorConfig.rampTime;
 
 /**
  * Uses a trapezoidal motion profile to move the elevator to a specific
@@ -31,21 +31,25 @@ import static frc.robot.subsystems.elevator.ElevatorConfig.maxVelocity;
  */
 public class ElevatorTrapezoidCommand extends Command {
 
+    final String name;
     final ElevatorSubsystem elevator;
     final DoubleSupplier heightSupplier;
-    final String name;
+    final SCurveProfile profile;
     final Timer timer;
-    State startState;
-    State finalState;
-    TrapezoidProfile profile;
+    double goalHeight;
 
     public ElevatorTrapezoidCommand(ElevatorSubsystem elevator,
                                     String name,
                                     DoubleSupplier heightSupplier) {
+        this.name = name;
         this.elevator = elevator;
         this.heightSupplier = heightSupplier;
-        this.name = name;
+        this.profile = new SCurveProfile(
+                maxVelocity,
+                maxAcceleration,
+                rampTime);
         this.timer = new Timer();
+
         addRequirements(elevator);
         setName("ElevatorTrapezoidCommand");
     }
@@ -53,24 +57,27 @@ public class ElevatorTrapezoidCommand extends Command {
     @Override
     public void initialize() {
 
-        // capture start state and final state
-        startState = new State(elevator.getCurrentHeight(), elevator.getCurrentVelocity());
-        finalState = new State(heightSupplier.getAsDouble(), 0.0);
-        Util.log("[elevator] moving to %s @ %.2f", name, finalState.position);
+        // capture goal height
+        goalHeight = heightSupplier.getAsDouble();
+        Util.log("[elevator] moving to %s @ %.2f", name, goalHeight);
 
-        // calculate a fresh motion profile based on latest configuration
-        profile = new TrapezoidProfile(new Constraints(
-                maxVelocity.getAsDouble(),
-                maxAcceleration.getAsDouble()));
+        // calculate motion profile
+        profile.reset(elevator.getCurrentHeight(),
+                elevator.getCurrentVelocity(),
+                goalHeight);
 
+        // reset stuff and get going
         elevator.resetPid();
         timer.restart();
     }
 
     @Override
     public void execute() {
-        State next = profile.calculate(timer.get(), startState, finalState);
-        elevator.closedLoop(name, next.position, next.velocity, finalState.position);
+        State state = profile.sample(timer.get());
+        elevator.closedLoop(name,
+                state.position(),
+                state.velocity(),
+                goalHeight);
     }
 
     @Override

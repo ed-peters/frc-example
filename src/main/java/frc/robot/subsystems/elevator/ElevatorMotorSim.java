@@ -43,6 +43,7 @@ import static frc.robot.util.Util.DT;
  */
 public class ElevatorMotorSim implements Motor {
 
+    // correct tuning parameters for these values
     // g = 1.3028
     // v = 0.0992
 

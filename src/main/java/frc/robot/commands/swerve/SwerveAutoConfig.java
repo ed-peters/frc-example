@@ -22,6 +22,7 @@ public class SwerveAutoConfig {
      */
     public static DoubleSupplier rotateMaxVelocity = pref("SwerveAutoPose/Rotate/MaxVelocity", 720.0);
     public static DoubleSupplier rotateMaxAcceleration = pref("SwerveAutoPose/Rotate/MaxAcceleration", 1440.0);
+    public static DoubleSupplier rotateRampTime = pref("SwerveAutoPose/Rotate/RampTime", 0.1);
 
     /**
      * Feedback constants for angle correction during auto rotation
@@ -47,6 +48,7 @@ public class SwerveAutoConfig {
      */
     public static DoubleSupplier translateMaxVelocity = pref("SwerveAutoPose/Translate/MaxVelocity", 15.0);
     public static DoubleSupplier translateMaxAcceleration = pref("SwerveAutoPose/Translate/MaxAcceleration", 30.0);
+    public static DoubleSupplier translateRampTime = pref("SwerveAutoPose/Translate/RampTime", 0.1);
 
     /**
      * Feedback constants for position correction during auto translation

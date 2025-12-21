@@ -5,9 +5,9 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.util.Units;
 import frc.robot.util.Util;
-import frc.robot.util.motion.SCurveProfile.Constraints;
 
 import java.util.Objects;
+import java.util.function.DoubleSupplier;
 
 /**
  * Calculates a straight-line profile between two separate {@link Pose2d}
@@ -42,16 +42,26 @@ public class PoseProfile {
 
     /**
      * Creates a {@link PoseProfile}
-     * @param translateConstraints new constraints in meters (required)
-     * @param rotateConstraints new constraints in radians (required)
+     * @param rotateMaxVelocity maximum rotational velocity (required)
+     * @param rotateMaxAcceleration maximum rotational velocity (required)
+     * @param rotateRampTime maximum rotational velocity (required)
+     * @param translateMaxVelocity maximum rotational velocity (required)
+     * @param translateMaxAcceleration maximum rotational velocity (required)
+     * @param translateRampTime maximum rotational velocity (required)
      * @throws IllegalArgumentException if required parameters are null
      */
-    public PoseProfile(Constraints translateConstraints,
-                       Constraints rotateConstraints) {
-        Objects.requireNonNull(translateConstraints);
-        Objects.requireNonNull(rotateConstraints);
-        translateProfile = new SCurveProfile(translateConstraints);
-        rotateProfile = new SCurveProfile(rotateConstraints);
+    public PoseProfile(DoubleSupplier rotateMaxVelocity,
+                       DoubleSupplier rotateMaxAcceleration,
+                       DoubleSupplier rotateRampTime,
+                       DoubleSupplier translateMaxVelocity,
+                       DoubleSupplier translateMaxAcceleration,
+                       DoubleSupplier translateRampTime) {
+        translateProfile = new SCurveProfile(rotateMaxVelocity,
+                rotateMaxAcceleration,
+                rotateRampTime);
+        rotateProfile = new SCurveProfile(translateMaxVelocity,
+                translateMaxAcceleration,
+                translateRampTime);
     }
 
     /**
