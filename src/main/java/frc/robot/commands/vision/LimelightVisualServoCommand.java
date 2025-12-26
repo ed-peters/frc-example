@@ -6,8 +6,8 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import frc.robot.subsystems.vision.LimelightSubsystem;
-import frc.robot.subsystems.vision.LimelightSubsystem.LimelightTarget;
 import frc.robot.util.Util;
+import frc.robot.util.vision.LimelightTarget;
 
 import java.util.function.Consumer;
 
@@ -93,7 +93,7 @@ public class LimelightVisualServoCommand extends Command {
     public void execute() {
 
         // we can only do this if we have a tag in view
-        LimelightTarget target = limelight.getCurrentTarget();
+        LimelightTarget target = limelight.getLatestGoodTarget();
         if (target == null) {
             Util.log("[ll-target] NO TAG IN VIEW !!!");
             running = false;
@@ -102,13 +102,13 @@ public class LimelightVisualServoCommand extends Command {
 
         // ta is how big the tag is in the camera frame; bigger means we're
         // closer to the tag (and hence we want to move in the -X direction)
-        lastArea = target.ta();
+        lastArea = target.area();
 
         // the limelight reports TX as positive when the tag is tx to the
         // left. when this is the case, we would want to move left (the +Y
         // direction), which is also positive. so we will negate the tx
         // for our feedback.
-        lastOffset = -target.tx();
+        lastOffset = -target.offset();
 
         // calculate X speed (forward-back) if the tag is either too big or
         // to small in the camera frame

@@ -1,6 +1,5 @@
 package frc.robot.commands.swerve;
 
-import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform2d;
@@ -12,6 +11,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import frc.robot.util.Util;
+import frc.robot.util.motion.PDController;
 import frc.robot.util.motion.PoseProfile;
 import frc.robot.util.motion.PoseProfile.State;
 
@@ -21,12 +21,14 @@ import java.util.function.Supplier;
 
 import static frc.robot.commands.swerve.SwerveAutoConfig.rotateD;
 import static frc.robot.commands.swerve.SwerveAutoConfig.rotateMaxAcceleration;
+import static frc.robot.commands.swerve.SwerveAutoConfig.rotateMaxFeedback;
 import static frc.robot.commands.swerve.SwerveAutoConfig.rotateMaxVelocity;
 import static frc.robot.commands.swerve.SwerveAutoConfig.rotateP;
 import static frc.robot.commands.swerve.SwerveAutoConfig.rotateRampTime;
 import static frc.robot.commands.swerve.SwerveAutoConfig.rotateTolerance;
 import static frc.robot.commands.swerve.SwerveAutoConfig.translateD;
 import static frc.robot.commands.swerve.SwerveAutoConfig.translateMaxAcceleration;
+import static frc.robot.commands.swerve.SwerveAutoConfig.translateMaxFeedback;
 import static frc.robot.commands.swerve.SwerveAutoConfig.translateMaxVelocity;
 import static frc.robot.commands.swerve.SwerveAutoConfig.translateP;
 import static frc.robot.commands.swerve.SwerveAutoConfig.translateRampTime;
@@ -42,9 +44,9 @@ public class SwerveAutoPoseCommand extends Command {
     final Supplier<Pose2d> poseSupplier;
     final Consumer<ChassisSpeeds> speedConsumer;
     final PoseProfile profile;
-    final PIDController pidX;
-    final PIDController pidY;
-    final PIDController pidOmega;
+    final PDController pidX;
+    final PDController pidY;
+    final PDController pidOmega;
     final Timer timer;
     Function<Pose2d,Pose2d> poseFunction;
     Pose2d startPose;
@@ -72,9 +74,9 @@ public class SwerveAutoPoseCommand extends Command {
                         translateMaxVelocity,
                         translateMaxAcceleration,
                         translateRampTime);
-        this.pidX = new PIDController(translateP.getAsDouble(), 0, translateD.getAsDouble());
-        this.pidY = new PIDController(translateP.getAsDouble(), 0, translateD.getAsDouble());
-        this.pidOmega = new PIDController(rotateP.getAsDouble(), 0, rotateD.getAsDouble());
+        this.pidX = new PDController(translateP, translateD, translateTolerance, translateMaxFeedback);
+        this.pidY = new PDController(translateP, translateD, translateTolerance, translateMaxFeedback);
+        this.pidOmega = new PDController(rotateP, rotateD, rotateTolerance, rotateMaxFeedback);
         this.timer = new Timer();
         this.poseFunction = poseFunction;
         this.startPose = Util.NAN_POSE;
@@ -90,9 +92,15 @@ public class SwerveAutoPoseCommand extends Command {
      */
     @Override
     public void initialize() {
+
         startPose = poseSupplier.get();
         finalPose = poseFunction.apply(startPose);
+
         profile.reset(startPose, finalPose);
+        pidX.reset();
+        pidY.reset();
+        pidOmega.reset();
+
         timer.restart();
     }
 
@@ -142,24 +150,17 @@ public class SwerveAutoPoseCommand extends Command {
     public void end(boolean interrupted) {
 
         Pose2d currentPose = poseSupplier.get();
-        Rotation2d currentHeading = currentPose.getRotation();
 
-        // error in rotation
-        double deltaDegrees = finalPose.getRotation()
-                .minus(currentHeading)
-                .getDegrees();
-        if (Math.abs(deltaDegrees) > rotateTolerance.getAsDouble()) {
-            Util.log("[auto-pose] !!! FAILED ROTATE; delta is %.2f", deltaDegrees);
-        } else {
-            Util.log("[auto-pose] done rotating");
+        // what if we failed to meet our rotation target?
+        if (!pidOmega.atSetpoint()) {
+            Util.log("[auto-pose] !!! FAILED ROTATE; delta is %.2f",
+                    Units.radiansToDegrees(pidOmega.getError()));
         }
 
-        // error in translation
-        double deltaFeet = Util.feetBetween(finalPose, currentPose);
-        if (Math.abs(deltaFeet) > translateTolerance.getAsDouble()) {
-            Util.log("[auto-pose] !!! FAILED TRANSLATE; delta is %.2f", deltaFeet);
-        } else {
-            Util.log("[auto-pose] done translating");
+        // what if we failed to meet either our X or Y targets?
+        if (!pidX.atSetpoint() || !pidY.atSetpoint()) {
+            Util.log("[auto-pose] !!! FAILED TRANSLATE; delta is %.2f",
+                    Util.feetBetween(finalPose, currentPose));
         }
 
         startPose = Util.NAN_POSE;

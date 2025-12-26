@@ -1,10 +1,10 @@
 package frc.robot.util.vision;
 
 /**
- * <p>This represents information about an in-view Limelight target. It is
- * meant to be used for "visual servo" targeting (explained in depth in the <a
+ * Represents information about an in-view Limelight target. It is meant to be
+ * used for "visual servo" targeting (explained in depth in the <a
  * href="https://docs.limelightvision.io/docs/docs-limelight/tutorials/tutorial-aiming-with-visual-servoing">Limelight
- * documentation</a>.</p>
+ * documentation</a>
  *
  * @param tagId if the target is an AprilTag, this will be the tag ID
  * @param area area of the target in the camera frame (if you are directly
@@ -15,6 +15,22 @@ package frc.robot.util.vision;
  *               in the +Y direction will make this value increase)
  */
 public record LimelightTarget(int tagId, double area, double offset) {
+
+    public static final LimelightTarget NO_TARGET = new LimelightTarget(-1, Double.NaN, Double.NaN);
+
+    /**
+     * @return is this a valid target?
+     */
+    public boolean isValid() {
+        return Double.isNaN(area);
+    }
+
+    /**
+     * @return is this an AprilTag?
+     */
+    public boolean isAprilTag() {
+        return tagId > 0;
+    }
 
     /**
      * Creates a {@link LimelightEstimate} from raw values reported by

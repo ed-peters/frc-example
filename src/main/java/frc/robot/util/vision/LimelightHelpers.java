@@ -25,8 +25,10 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * LimelightHelpers provides static methods and classes for interfacing with Limelight vision cameras in FRC.
- * This library supports all Limelight features including AprilTag tracking, Neural Networks, and standard color/retroreflective tracking.
+ * LimelightHelpers provides static methods and classes for interfacing with
+ * Limelight vision cameras in FRC. This library supports all Limelight
+ * features including AprilTag tracking, Neural Networks, and standard
+ * color/retroreflective tracking.
  */
 @SuppressWarnings("all")
 public class LimelightHelpers {

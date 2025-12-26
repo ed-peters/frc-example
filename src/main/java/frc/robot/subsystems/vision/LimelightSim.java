@@ -38,15 +38,6 @@ public class LimelightSim {
     public static final double [] NO_TAG = new double[0];
 
     /**
-     * This is the position on the field of AprilTag 16 in the 2025 game
-     * (this is the one on the blue algae chute). If you drive the robot
-     * close to that tag,
-     */
-    public static final Translation2d TAG_POSITION = new Translation2d(
-            Units.inchesToMeters(235.73),
-            0.0);
-
-    /**
      * This is the angle (in degrees) of the cone in front of the robot that
      * will be used for detecting tags
      */

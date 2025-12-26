@@ -11,13 +11,23 @@ import static frc.robot.subsystems.vision.QuestnavConfig.HEADSET_TO_ROBOT;
 import static frc.robot.subsystems.vision.QuestnavConfig.ROBOT_TO_HEADSET;
 import static frc.robot.subsystems.vision.QuestnavConfig.confidence;
 
-public class QuestnavSubsystem extends SubsystemBase {
+
+/**
+ * Subsystem that uses the {@link QuestNav} to provide up-to-date pose
+ * estimation. This subsystem is implemented so it doesn't depend on a specific
+ * swerve drive implementation for supplying pose estimates or resetting the
+ * pose.
+ */public class QuestnavSubsystem extends SubsystemBase {
 
     final QuestNav questnav;
     final VisionEstimateConsumer estimateConsumer;
     Pose2d estimatedPose;
     double estimatedTimestamp;
 
+    /**
+     * Creates a {@link QuestnavSubsystem}
+     * @param estimateConsumer accepts valid pose estimates every period
+     */
     public QuestnavSubsystem(VisionEstimateConsumer estimateConsumer) {
 
         this.estimateConsumer = estimateConsumer;
@@ -34,9 +44,9 @@ public class QuestnavSubsystem extends SubsystemBase {
     }
 
     /**
-     * This MUST be called if the robot's pose changes (for instance, at the
-     * beginning of an auto routine) - we have to tell the headset where it is
-     * on the field
+     * TODO you MUST call this if robot's pose changes
+     * Specific example - at the beginning of auto when you determine where the
+     * robot is on the field, you have to tell the headset where it is
      */
     public void resetPose(Pose2d robotPose) {
         questnav.setPose(robotPose.transformBy(ROBOT_TO_HEADSET));

@@ -50,6 +50,9 @@ public class Util {
     /** Speed with no values */
     public static final ChassisSpeeds NAN_SPEED = new ChassisSpeeds(Double.NaN, Double.NaN, Double.NaN);
 
+    /** Speed with 0 values */
+    public static final ChassisSpeeds ZERO_SPEED = new ChassisSpeeds(0.0, 0.0, 0.0);
+
     // ===========================================================
     // MISC STUFF
     // ===========================================================
@@ -77,10 +80,17 @@ public class Util {
     }
 
     /**
+     * @return the distance between the two poses in meters
+     */
+    public static double metersBetween(Pose2d start, Pose2d end) {
+        return start.minus(end).getTranslation().getNorm();
+    }
+
+    /**
      * @return the distance between the two poses in feet
      */
     public static double feetBetween(Pose2d start, Pose2d end) {
-        return Units.metersToFeet(start.minus(end).getTranslation().getNorm());
+        return Units.metersToFeet(metersBetween(start, end));
     }
 
     /**

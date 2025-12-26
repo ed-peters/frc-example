@@ -16,9 +16,9 @@ import java.util.function.DoubleSupplier;
  */
 public class PoseProfile {
 
-    // we're going to hardcode these because it seems unlikely to change
+    // we're going to hardcode these because they seem unlikely to need tuning
     static final double MIN_ROTATION = Units.degreesToRadians(3.0);
-    static final double MIN_TRANSLATION = 3.0 / 12.0;
+    static final double MIN_TRANSLATION = Units.inchesToMeters(3.0);
 
     /**
      * Captures the desired position and speed at a moment in time.
@@ -42,31 +42,38 @@ public class PoseProfile {
 
     /**
      * Creates a {@link PoseProfile}
-     * @param rotateMaxVelocity maximum rotational velocity (required)
-     * @param rotateMaxAcceleration maximum rotational velocity (required)
-     * @param rotateRampTime maximum rotational velocity (required)
-     * @param translateMaxVelocity maximum rotational velocity (required)
-     * @param translateMaxAcceleration maximum rotational velocity (required)
-     * @param translateRampTime maximum rotational velocity (required)
+     * @param translateMaxVelocity supplies max translation velocity in ft/sec (required)
+     * @param translateMaxAcceleration supplies max translation acceleration in ft/sec squared (required)
+     * @param translateRampTime supplies time in seconds to max translation acceleration (required)
+     * @param rotateMaxVelocity supplies max rotational velocity in deg/sec (required)
+     * @param rotateMaxAcceleration supplies max rotational velocity in deg/sec squared (required)
+     * @param rotateRampTime supplies time in seconds to max rotational acceleration (required)
      * @throws IllegalArgumentException if required parameters are null
      */
-    public PoseProfile(DoubleSupplier rotateMaxVelocity,
-                       DoubleSupplier rotateMaxAcceleration,
-                       DoubleSupplier rotateRampTime,
-                       DoubleSupplier translateMaxVelocity,
+    public PoseProfile(DoubleSupplier translateMaxVelocity,
                        DoubleSupplier translateMaxAcceleration,
-                       DoubleSupplier translateRampTime) {
-        translateProfile = new SCurveProfile(rotateMaxVelocity,
-                rotateMaxAcceleration,
-                rotateRampTime);
-        rotateProfile = new SCurveProfile(translateMaxVelocity,
-                translateMaxAcceleration,
+                       DoubleSupplier translateRampTime,
+                       DoubleSupplier rotateMaxVelocity,
+                       DoubleSupplier rotateMaxAcceleration,
+                       DoubleSupplier rotateRampTime) {
+
+        // our internal calculations are all being done in meters, so we will
+        // translate incoming limits when calculating the translation profile
+        translateProfile = new SCurveProfile(
+                () -> Units.feetToMeters(translateMaxVelocity.getAsDouble()),
+                () -> Units.feetToMeters(translateMaxAcceleration.getAsDouble()),
                 translateRampTime);
+
+        // our internal calculations are all being done in degrees, so we will
+        // translate incoming limits when calculating the rotation profile
+        rotateProfile = new SCurveProfile(
+                () -> Units.degreesToRadians(rotateMaxVelocity.getAsDouble()),
+                () -> Units.degreesToRadians(rotateMaxAcceleration.getAsDouble()),
+                rotateRampTime);
     }
 
     /**
-     * Resets the motion described by this profile.
-     *
+     * Resets the motion described by this profile
      * @param startPose start pose (required)
      * @param finalPose final pose (required)
      * @throws IllegalArgumentException if required parameters are null
@@ -98,14 +105,15 @@ public class PoseProfile {
         // if we're translating, we will calculate the distance and angle
         // between the start and end pose, and we will move along a straight
         // line using an SCurve profile.
-        //
+        double meters = Util.metersBetween(startPose, finalPose);
+
         // if the distance is less than a few inches, we won't bother trying
         // to do the translation.
-        double meters = Units.feetToMeters(Util.feetBetween(
-                startPose,
-                finalPose));
         isTranslating = meters > MIN_TRANSLATION;
         if (isTranslating) {
+
+            translateProfile.reset(0.0, 0.0, meters);
+            totalTime = Math.max(totalTime, translateProfile.totalTime());
 
             // this is the angle of line between the start and final poses; cos
             // and sin will help us decompose straight-line movement along that
@@ -115,9 +123,6 @@ public class PoseProfile {
                     .getAngle();
             cos = angle.getCos();
             sin = angle.getSin();
-
-            translateProfile.reset(0.0, 0.0, meters);
-            totalTime = Math.max(totalTime, translateProfile.totalTime());
         }
     }
 
@@ -134,6 +139,14 @@ public class PoseProfile {
         double poseY = startPose.getY();
         double poseOmega = startPose.getRotation().getRadians();
 
+        // if we're before the beginning or after the end, we will use either
+        // the start or final pose and assume 0 speed
+        if (t < 0) {
+            return new State(startPose, Util.ZERO_SPEED);
+        } else if (t > totalTime) {
+            return new State(finalPose, Util.ZERO_SPEED);
+        }
+
         // if we're rotating, we get the state of the rotation profile. the
         // position will be the offset from the start heading at this moment
         // in time.
@@ -143,9 +156,9 @@ public class PoseProfile {
             speedOmega = state.velocity();
         }
 
-        // if we're translation, we get the state of the translation profile.
+        // if we're translating, we get the state of the translation profile.
         // the position and velocity will along the line from start to finish;
-        // we decompose them X/Y using cos/sin.
+        // we decompose them along X/Y using cos/sin.
         if (isTranslating) {
             SCurveProfile.State state = translateProfile.sample(t);
             speedX = state.velocity() * cos;

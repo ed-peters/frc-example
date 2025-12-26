@@ -40,7 +40,7 @@ public class LimelightSimRobot extends TimedRobot {
 
         // this is how you connect the limelight subsystem to a drive
         limelight = new LimelightSubsystem(
-                drive::getPose,
+                () -> drive.getPose().getRotation(),
                 drive::addVisionEstimate);
 
         // this tells the limelight simulator to use the odometry-only
@@ -102,7 +102,7 @@ public class LimelightSimRobot extends TimedRobot {
      */
     private Command limelightPoseCommand() {
         return drive.runOnce(() -> {
-            Pose2d newPose = limelight.getCurrentPose();
+            Pose2d newPose = limelight.getLatestGoodPose();
             if (newPose == null) {
                 Util.log("[ll-pose] !!! NO TAG IN VIEW !!!");
             } else {

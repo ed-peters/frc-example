@@ -10,7 +10,20 @@ import frc.robot.util.vision.LimelightHelpers.PoseEstimate;
  * @param status status of the estimate
  * @param estimate (might be null if the estimate isn't valid)
  */
-public record LimelightEstimate(Status status, PoseEstimate estimate) {
+public record LimelightEstimate(Status status,
+                                double ambiguity,
+                                double distance,
+                                double area,
+                                double yawRate,
+                                PoseEstimate estimate) {
+
+    public static final LimelightEstimate NO_TAG = new LimelightEstimate(
+            Status.NO_TAG,
+            Double.NaN,
+            Double.NaN,
+            Double.NaN,
+            Double.NaN,
+            null);
 
     /**
      * Represents the results of pose estimation. The exact type of failures
@@ -47,19 +60,19 @@ public record LimelightEstimate(Status status, PoseEstimate estimate) {
     }
 
     /**
-     * Creates a {@link LimelightEstimate} with no estimate
-     * @param status the status for the estimate
+     * @return is this considered a "good" estimate (if this is false, the
+     * associated pose is probably null and, even if it isn't, you shouldn't
+     * use it)
      */
-    public LimelightEstimate(Status status) {
-        this(status, null);
+    public boolean isValid() {
+        return status == Status.SUCCESS;
     }
 
     /**
-     * @return is this considered a "good" estimate (if this is false, you
-     * should not use the associated estimate)
+     * @return the area of the tag us to capture the estimate
      */
-    public boolean isFailure() {
-        return status != Status.SUCCESS;
+    public double getTagArea() {
+        return estimate.avgTagArea;
     }
 
     /**
