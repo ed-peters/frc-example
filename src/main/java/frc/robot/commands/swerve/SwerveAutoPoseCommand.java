@@ -1,9 +1,6 @@
 package frc.robot.commands.swerve;
 
 import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Transform2d;
-import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.Timer;
@@ -11,9 +8,10 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 import frc.robot.util.Util;
+import frc.robot.util.motion.Motion;
+import frc.robot.util.motion.Motions;
 import frc.robot.util.motion.PDController;
-import frc.robot.util.motion.PoseProfile;
-import frc.robot.util.motion.PoseProfile.State;
+import frc.robot.util.swerve.SwerveState;
 
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -24,30 +22,28 @@ import static frc.robot.commands.swerve.SwerveAutoConfig.rotateMaxAcceleration;
 import static frc.robot.commands.swerve.SwerveAutoConfig.rotateMaxFeedback;
 import static frc.robot.commands.swerve.SwerveAutoConfig.rotateMaxVelocity;
 import static frc.robot.commands.swerve.SwerveAutoConfig.rotateP;
-import static frc.robot.commands.swerve.SwerveAutoConfig.rotateRampTime;
 import static frc.robot.commands.swerve.SwerveAutoConfig.rotateTolerance;
 import static frc.robot.commands.swerve.SwerveAutoConfig.translateD;
 import static frc.robot.commands.swerve.SwerveAutoConfig.translateMaxAcceleration;
 import static frc.robot.commands.swerve.SwerveAutoConfig.translateMaxFeedback;
 import static frc.robot.commands.swerve.SwerveAutoConfig.translateMaxVelocity;
 import static frc.robot.commands.swerve.SwerveAutoConfig.translateP;
-import static frc.robot.commands.swerve.SwerveAutoConfig.translateRampTime;
 import static frc.robot.commands.swerve.SwerveAutoConfig.translateTolerance;
 
 /**
  * This command drives the robot to a fixed pose on the field using a
- * {@link PoseProfile}. It's implemented so it doesn't depend on a specific
- * swerve drive implementation.
+ * {@link frc.robot.util.motion.SwerveStraightLineMotion}. It's implemented
+ * so it doesn't depend on a specific swerve drive implementation.
  */
 public class SwerveAutoPoseCommand extends Command {
 
     final Supplier<Pose2d> poseSupplier;
     final Consumer<ChassisSpeeds> speedConsumer;
-    final PoseProfile profile;
     final PDController pidX;
     final PDController pidY;
     final PDController pidOmega;
     final Timer timer;
+    Motion<SwerveState> motion;
     Function<Pose2d,Pose2d> poseFunction;
     Pose2d startPose;
     Pose2d finalPose;
@@ -67,13 +63,6 @@ public class SwerveAutoPoseCommand extends Command {
                                  Function<Pose2d,Pose2d> poseFunction) {
         this.poseSupplier = poseSupplier;
         this.speedConsumer = speedConsumer;
-        this.profile = new PoseProfile(
-                        rotateMaxVelocity,
-                        rotateMaxAcceleration,
-                        rotateRampTime,
-                        translateMaxVelocity,
-                        translateMaxAcceleration,
-                        translateRampTime);
         this.pidX = new PDController(translateP, translateD, translateTolerance, translateMaxFeedback);
         this.pidY = new PDController(translateP, translateD, translateTolerance, translateMaxFeedback);
         this.pidOmega = new PDController(rotateP, rotateD, rotateTolerance, rotateMaxFeedback);
@@ -95,8 +84,14 @@ public class SwerveAutoPoseCommand extends Command {
 
         startPose = poseSupplier.get();
         finalPose = poseFunction.apply(startPose);
+        motion = Motions.straightLineSwerve(
+                rotateMaxVelocity,
+                rotateMaxAcceleration,
+                translateMaxVelocity,
+                translateMaxAcceleration,
+                startPose,
+                finalPose);
 
-        profile.reset(startPose, finalPose);
         pidX.reset();
         pidY.reset();
         pidOmega.reset();
@@ -115,9 +110,15 @@ public class SwerveAutoPoseCommand extends Command {
     @Override
     public void execute() {
 
-        State desiredState = profile.sample(timer.get());
-        ChassisSpeeds desiredSpeeds = desiredState.speed();
+        SwerveState desiredState = motion.sample(timer.get());
         Pose2d desiredPose = desiredState.pose();
+
+        // since the PoseProfile gives us field-relative speeds, we need to
+        // translate them into robot-relative speeds so we can tell the
+        // robot to drive the intended path
+        ChassisSpeeds desiredSpeeds = ChassisSpeeds.fromFieldRelativeSpeeds(
+                desiredState.speeds(),
+                poseSupplier.get().getRotation());
 
         SmartDashboard.putBoolean("SwerveAutoPoseCommand/Running?", true);
         SmartDashboard.putNumber("SpeedX", Units.metersToFeet(desiredSpeeds.vxMetersPerSecond));
@@ -134,7 +135,7 @@ public class SwerveAutoPoseCommand extends Command {
      */
     @Override
     public boolean isFinished() {
-        return timer.hasElapsed(profile.totalTime());
+        return motion == null || timer.hasElapsed(motion.totalTime());
     }
 
     /**
@@ -165,6 +166,7 @@ public class SwerveAutoPoseCommand extends Command {
 
         startPose = Util.NAN_POSE;
         finalPose = Util.NAN_POSE;
+        motion = null;
 
         SmartDashboard.putBoolean("SwerveAutoPoseCommand/Running?", false);
     }
@@ -190,86 +192,26 @@ public class SwerveAutoPoseCommand extends Command {
     }
 
     /**
-     * Creates a {@link SwerveAutoPoseCommand} that calculates its final pose
-     * by applying a {@link Transform2d} to the robot's starting pose each
-     * time it's run
+     * Creates a {@link SwerveAutoPoseCommand} that drives to a relative
+     * offset from the current position every time it's run
      *
      * @param subsystem the subsystem that controls the drive
      * @param poseSupplier supplier for the current robot pose
      * @param speedConsumer setter for drive speed
-     * @param transform transformation of the start pose
+     * @param relativePose target pose, relative to the robot's pose when
+     *                     the command starts (for instance, an X value of +1
+     *                     would slide the robot 1m to the left when the
+     *                     command runs)
      * @return the command
      */
-    public static Command transform(Subsystem subsystem,
-                                    Supplier<Pose2d> poseSupplier,
-                                    Consumer<ChassisSpeeds> speedConsumer,
-                                    Transform2d transform) {
+    public static Command relative(Subsystem subsystem,
+                                   Supplier<Pose2d> poseSupplier,
+                                   Consumer<ChassisSpeeds> speedConsumer,
+                                   Pose2d relativePose) {
+
         return new SwerveAutoPoseCommand(subsystem,
                 poseSupplier,
                 speedConsumer,
-                currentPose -> currentPose.transformBy(transform));
-    }
-
-    /**
-     * Creates a {@link SwerveAutoPoseCommand} that translates the robot in a
-     * specified direction
-     *
-     * @param subsystem the subsystem that controls the drive
-     * @param poseSupplier supplier for the current robot pose
-     * @param speedConsumer setter for drive speed
-     * @param translation translation to apply
-     * @return the command
-     */
-    public static Command translate(Subsystem subsystem,
-                                    Supplier<Pose2d> poseSupplier,
-                                    Consumer<ChassisSpeeds> speedConsumer,
-                                    Translation2d translation) {
-        return transform(subsystem,
-                poseSupplier,
-                speedConsumer,
-                new Transform2d(translation, Rotation2d.kZero));
-    }
-
-    /**
-     * Creates a {@link SwerveAutoPoseCommand} that rotates the robot to a
-     * specific heading
-     *
-     * @param subsystem the subsystem that controls the drive
-     * @param poseSupplier supplier for the current robot pose
-     * @param speedConsumer setter for drive speed
-     * @param heading heading to face
-     * @return the command
-     */
-    public static Command rotateTo(Subsystem subsystem,
-                                   Supplier<Pose2d> poseSupplier,
-                                   Consumer<ChassisSpeeds> speedConsumer,
-                                   Rotation2d heading) {
-        Function<Pose2d,Pose2d> func = currentHeading -> new Pose2d(
-                currentHeading.getTranslation(),
-                heading);
-        return new SwerveAutoPoseCommand(subsystem,
-                poseSupplier,
-                speedConsumer,
-                func);
-    }
-
-    /**
-     * Creates a {@link SwerveAutoPoseCommand} that rotates the robot by
-     * a relative angle
-     *
-     * @param subsystem the subsystem that controls the drive
-     * @param poseSupplier supplier for the current robot pose
-     * @param speedConsumer setter for drive speed
-     * @param rotation rotation to apply
-     * @return the command
-     */
-    public static Command rotateBy(Subsystem subsystem,
-                                   Supplier<Pose2d> poseSupplier,
-                                   Consumer<ChassisSpeeds> speedConsumer,
-                                   Rotation2d rotation) {
-        return transform(subsystem,
-                poseSupplier,
-                speedConsumer,
-                new Transform2d(Translation2d.kZero, rotation));
+                currentPose -> Util.addRelativePose(currentPose, relativePose));
     }
 }

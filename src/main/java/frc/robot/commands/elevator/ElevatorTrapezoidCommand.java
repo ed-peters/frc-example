@@ -1,17 +1,17 @@
 package frc.robot.commands.elevator;
 
+import edu.wpi.first.math.trajectory.TrapezoidProfile.State;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.subsystems.elevator.ElevatorSubsystem;
 import frc.robot.util.Util;
-import frc.robot.util.motion.SCurveProfile;
-import frc.robot.util.motion.SCurveProfile.State;
+import frc.robot.util.motion.Motion;
+import frc.robot.util.motion.Motions;
 
 import java.util.function.DoubleSupplier;
 
 import static frc.robot.subsystems.elevator.ElevatorConfig.maxAcceleration;
 import static frc.robot.subsystems.elevator.ElevatorConfig.maxVelocity;
-import static frc.robot.subsystems.elevator.ElevatorConfig.rampTime;
 
 /**
  * Uses a trapezoidal motion profile to move the elevator to a specific
@@ -34,8 +34,8 @@ public class ElevatorTrapezoidCommand extends Command {
     final String name;
     final ElevatorSubsystem elevator;
     final DoubleSupplier heightSupplier;
-    final SCurveProfile profile;
     final Timer timer;
+    Motion<State> motion;
     double goalHeight;
 
     public ElevatorTrapezoidCommand(ElevatorSubsystem elevator,
@@ -44,10 +44,6 @@ public class ElevatorTrapezoidCommand extends Command {
         this.name = name;
         this.elevator = elevator;
         this.heightSupplier = heightSupplier;
-        this.profile = new SCurveProfile(
-                maxVelocity,
-                maxAcceleration,
-                rampTime);
         this.timer = new Timer();
 
         addRequirements(elevator);
@@ -62,7 +58,10 @@ public class ElevatorTrapezoidCommand extends Command {
         Util.log("[elevator] moving to %s @ %.2f", name, goalHeight);
 
         // calculate motion profile
-        profile.reset(elevator.getCurrentHeight(),
+        motion = Motions.trapezoid(
+                maxVelocity,
+                maxAcceleration,
+                elevator.getCurrentHeight(),
                 elevator.getCurrentVelocity(),
                 goalHeight);
 
@@ -73,16 +72,16 @@ public class ElevatorTrapezoidCommand extends Command {
 
     @Override
     public void execute() {
-        State state = profile.sample(timer.get());
+        State state = motion.sample(timer.get());
         elevator.closedLoop(name,
-                state.position(),
-                state.velocity(),
+                state.position,
+                state.velocity,
                 goalHeight);
     }
 
     @Override
     public boolean isFinished() {
-        return timer.hasElapsed(profile.totalTime());
+        return motion == null || timer.hasElapsed(motion.totalTime());
     }
 
     @Override

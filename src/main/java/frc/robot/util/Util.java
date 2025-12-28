@@ -8,6 +8,7 @@ import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.trajectory.TrapezoidProfile.State;
 import edu.wpi.first.math.util.Units;
@@ -52,6 +53,12 @@ public class Util {
 
     /** Speed with 0 values */
     public static final ChassisSpeeds ZERO_SPEED = new ChassisSpeeds(0.0, 0.0, 0.0);
+
+    /** State with 0 values */
+    public static final State ZERO_STATE = new State(0.0, 0.0);
+
+    /** State with no values */
+    public static final State NAN_STATE = new State(Double.NaN, Double.NaN);
 
     // ===========================================================
     // MISC STUFF
@@ -193,6 +200,21 @@ public class Util {
     /** @return true if the supplied speeds include a rotation */
     public static boolean isRotating(ChassisSpeeds speeds) {
         return Math.abs(speeds.omegaRadiansPerSecond) > 0.0;
+    }
+
+    /**
+     * @param start a starting pose
+     * @param relativeTarget a target pose, in the coordinate system of the
+     *                       robot (for example: x=1.0, y=0.0, r=180d means
+     *                       the final pose will be one meter in front of the
+     *                       start pose and facing the opposite direction)
+     * @return the calculated final pose
+     */
+    public static Pose2d addRelativePose(Pose2d start, Pose2d relativeTarget) {
+        Transform2d transform2d = new Transform2d(
+                relativeTarget.getTranslation(),
+                relativeTarget.getRotation());
+        return start.plus(transform2d);
     }
 
     /** Prefix & loggers for logging pose structs */

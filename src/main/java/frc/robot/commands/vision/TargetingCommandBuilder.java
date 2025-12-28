@@ -78,11 +78,11 @@ public class TargetingCommandBuilder {
         }
 
         // otherwise, we will finish by translating to the offset position
-        Command driveToOffset = SwerveAutoPoseCommand.translate(
+        Command driveToOffset = SwerveAutoPoseCommand.relative(
                 driveSubsystem,
                 poseSupplier,
                 speedConsumer,
-                offset);
+                new Pose2d(offset, Rotation2d.kZero));
         return print
                 .andThen(rotate)
                 .andThen(servo)
@@ -112,11 +112,11 @@ public class TargetingCommandBuilder {
         }
 
         // otherwise, we will finish by driving to the offset position
-        Command driveToOffset = SwerveAutoPoseCommand.translate(
+        Command driveToOffset = SwerveAutoPoseCommand.relative(
                 driveSubsystem,
                 poseSupplier,
                 speedConsumer,
-                offset);
+                new Pose2d(offset, Rotation2d.kZero));
         return print
                 .andThen(driveToStart)
                 .andThen(servo)

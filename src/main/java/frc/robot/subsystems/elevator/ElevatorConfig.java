@@ -37,12 +37,6 @@ public class ElevatorConfig {
     public static final DoubleSupplier maxAcceleration = pref("ElevatorSubsystem/MaxAcceleration", 240.0);
 
     /**
-     * Time in seconds to achieve maximum acceleration. This limits how much
-     * we "jerk" on the mechanism when starting movement.
-     */
-    public static final DoubleSupplier rampTime = pref("ElevatorSubsystem/RampTime", 0.2);
-
-    /**
      * Maximum voltage in teleop for moving elevator; see
      * {@link frc.robot.commands.elevator.ElevatorTuningCommand}
      */

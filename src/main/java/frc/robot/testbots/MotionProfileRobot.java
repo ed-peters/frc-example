@@ -1,52 +1,45 @@
 package frc.robot.testbots;
 
+import edu.wpi.first.math.trajectory.TrapezoidProfile.State;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import frc.robot.util.motion.SCurveProfile;
-import frc.robot.util.motion.SCurveProfile.State;
+import frc.robot.commands.swerve.SwerveAutoConfig;
+import frc.robot.util.Util;
+import frc.robot.util.motion.Motion;
+import frc.robot.util.motion.Motions;
 
 public class MotionProfileRobot extends TimedRobot {
 
-    static final State NO_STATE = new State(0.0, 0.0, 0.0);
-
     XboxController controller;
-    SCurveProfile profile;
+    Motion<State> profile;
     double maxPosition;
     double maxVelocity;
     double maxAcceleration;
-    double rampTime;
     Timer timer;
     State state;
 
     public MotionProfileRobot() {
 
         controller = new XboxController(0);
-        profile = new SCurveProfile(
-                () -> maxVelocity,
-                () -> maxAcceleration,
-                () -> rampTime);
-        maxPosition = 50.0;
-        maxVelocity = 10.0;
-        maxAcceleration = 5.0;
-        rampTime = 0.2;
+        maxPosition = Math.PI;
+        maxVelocity = Math.toRadians(SwerveAutoConfig.rotateMaxVelocity.getAsDouble());
+        maxAcceleration =  Math.toRadians(SwerveAutoConfig.rotateMaxAcceleration.getAsDouble());
         timer = new Timer();
-        state = NO_STATE;
+        state = Util.ZERO_STATE;
 
         SmartDashboard.putData("Motion", builder -> {
             builder.addDoubleProperty("Config/MaxPosition", () -> maxPosition, val -> maxPosition = val);
             builder.addDoubleProperty("Config/MaxVelocity", () -> maxVelocity, val -> maxVelocity = val);
             builder.addDoubleProperty("Config/MaxAcceleration", () -> maxAcceleration, val -> maxAcceleration = val);
-            builder.addDoubleProperty("Config/RampTime", () -> rampTime, val -> rampTime = val);
-    });
+        });
 
     }
 
     public void robotPeriodic() {
-        SmartDashboard.putNumber("Motion/Output/Position", state.position());
-        SmartDashboard.putNumber("Motion/Output/Velocity", state.velocity());
-        SmartDashboard.putNumber("Motion/Output/Acceleration", state.acceleration());
+        SmartDashboard.putNumber("Motion/Output/Position", state.position);
+        SmartDashboard.putNumber("Motion/Output/Velocity", state.velocity);
     }
 
     @Override
@@ -60,9 +53,13 @@ public class MotionProfileRobot extends TimedRobot {
         if (controller.getAButtonReleased()) {
             if (timer.isRunning()) {
                 timer.stop();
-                state = NO_STATE;
+                state = Util.ZERO_STATE;
             } else {
-                profile.reset(0.0, 0.0, maxPosition);
+                profile = Motions.trapezoid(
+                        () -> maxVelocity,
+                        () -> maxAcceleration,
+                        0.0,
+                        maxPosition);
                 timer.restart();
             }
         }

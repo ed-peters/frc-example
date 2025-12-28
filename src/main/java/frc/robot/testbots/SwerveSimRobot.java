@@ -45,21 +45,19 @@ public class SwerveSimRobot extends TimedRobot {
         controller.povRight().onTrue(faceTheWallCommand(ArenaWall.WEST));
 
         // a will rotate a little bit left (spam it to turn around fully)
-        controller.a().onTrue(SwerveAutoPoseCommand.rotateBy(
+        controller.a().onTrue(SwerveAutoPoseCommand.relative(
                         drive,
                         drive::getPose,
                         speeds -> drive.drive("auto", speeds),
-                        Rotation2d.fromDegrees(15.0)));
+                        new Pose2d(0.0, 0.0, Rotation2d.fromDegrees(15.0))));
 
         // b will move the robot one meter straight ahead, and turn it around
         // to face the position is was just occupying
-        controller.b().onTrue(SwerveAutoPoseCommand.transform(
+        controller.b().onTrue(SwerveAutoPoseCommand.relative(
                         drive,
                         drive::getPose,
                         speeds -> drive.drive("auto", speeds),
-                        new Transform2d(
-                                new Translation2d(1.0, 0.0),
-                                Rotation2d.k180deg)));
+                        new Pose2d(1.0, 0.0, Rotation2d.k180deg)));
 
         // x will rotate us slowly around the center of the blue reef
         controller.x().onTrue(rotateAroundReefCommand(90.0));
@@ -106,11 +104,11 @@ public class SwerveSimRobot extends TimedRobot {
             case SOUTH -> Rotation2d.kCW_90deg;
         };
 
-        return SwerveAutoPoseCommand.rotateTo(
+        return SwerveAutoPoseCommand.relative(
                 drive,
                 drive::getPose,
                 speeds -> drive.drive("face-"+wall, speeds),
-                heading);
+                new Pose2d(0.0, 0.0, heading));
     }
 
     /**
